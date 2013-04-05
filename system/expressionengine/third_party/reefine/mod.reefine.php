@@ -458,7 +458,7 @@ class Reefine {
 				}
 				if (count($group['category_group'])>0) {
 					$results = $this->get_filter_groups_for_list($group_key,$group,'cat_name',
-							"{$this->dbprefix}categories.group_id IN ({$group['cat_group_in_list']})");
+							"{$this->dbprefix}categories.group_id IN {$group['cat_group_in_list']}");
 					$filters = array_merge($filters,$results);
 				}
 			} else if ($group['type']=='search') {
