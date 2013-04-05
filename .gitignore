@@ -1,0 +1,21 @@
+# Ignore everything:
+*
+
+# Except..
+!.gitignore
+!themes/
+!themes/third_party
+!themes/third_party/reefine
+!themes/third_party/reefine/*
+!themes/third_party/reefine/*/*
+!themes/third_party/reefine/*/*/*
+!system/
+!system/expressionengine
+!system/expressionengine/third_party
+!system/expressionengine/third_party/reefine
+!system/expressionengine/third_party/reefine/*
+!system/expressionengine/third_party/reefine/*/*
+!system/expressionengine/third_party/reefine/*/*/*
+
+
+
