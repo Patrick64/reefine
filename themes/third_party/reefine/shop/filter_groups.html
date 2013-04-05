@@ -1,0 +1,80 @@
+<div class="reefine_search">
+	{filter_groups}
+		
+		{if type=='search'}
+		{filters}
+		<form method="post">
+			<label for="{group_name}">Search</label>
+		  <input
+				type="text" id="{group_name}" name="{group_name}" placeholder="search"
+				value="{filter_value}" />
+		  <input type="submit" name="submit" value="Go" />
+		</form>
+		<!--{url}{filter_value}{filter_active}{filter_quantity}{filter_min_value}{filter_max_value}{filter_min}{filter_max}-->
+		{/filters}
+		{/if}
+	{/filter_groups}
+</div>
+<div class="reefine_sidebar">
+	{if total_active_filters > 0}
+	<div class="reefine_active_filters">	
+		<h3>Selected Criteria</h3>
+		<ul>
+		{filter_groups}
+			{if active_filters>0}
+				{if type=='list'}
+					{filters}
+						{if filter_active}
+
+						<li class="active">
+						<a href="{url}">{filter_value} ({filter_quantity})</a>
+						</li>
+						{/if}
+					{/filters}
+				{if:else}
+					<li class="active">
+					<a class="remove-filter" href="{clear_url}">
+					{filters}
+					<!--{url}{filter_value}{filter_active}{filter_quantity}{filter_min_value}{filter_max_value}{filter_min}{filter_max}-->
+					{if filter_active}{if active_index>0}, {/if}{filter_value}{/if}{/filters}
+					</a>
+					</li>
+				{/if}
+			{/if}
+		{/filter_groups}
+		</ul>
+		<p class="total_entries">{total_entries} products available</p>
+	</div>
+	{/if}
+	<div class="reefine_filters">
+		{filter_groups}
+			
+			{if type=='search'}
+			{if:elseif type=='number_range'}
+			<h3 class="{filter_url_title}">{label}</h3>			
+			<form method="post" class="number_range">
+				{filters} 
+				<input type="text" name="{group_name}_min" placeholder="{filter_min}"
+					value="{filter_min_value}"/>
+					&mdash; <input type="text" name="{group_name}_max" placeholder="{filter_max}"
+					value="{filter_max_value}"/>
+				{/filters} 
+				<input type="submit" name="submit" value="Go" />
+			</form>
+			{if:elseif total_filters > 0 }
+				<h3 class="{filter_url_title}">{label}</h3>
+				<ul>
+				{filters}
+					{if filter_quantity > 0}
+					<li class="{if filter_active}active{if:else}inactive{/if}">
+					<a href="{url}">{filter_value} ({filter_quantity})</a>
+					</li>
+					{/if}
+				{/filters}
+				</ul>
+			{if:else}
+				<p>n/a</p>
+			{/if}
+		{/filter_groups}
+	</div>
+</div>
