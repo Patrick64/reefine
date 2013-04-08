@@ -357,6 +357,16 @@ class Reefine {
 		if (count($this->EE->TMPL->search_fields)>0) {
 			$this->search_field_where_clause = $this->get_search_field_where_clause($this->EE->TMPL->search_fields);
 		}	
+		
+		// category_url parameter limits results to just the the category_url
+		if (!empty($this->EE->TMPL->tagparams['category_url'])) {
+			
+			// include categories in select
+			$this->include_categories=true;
+			$this->search_field_where_clause .= $this->search_field_where_clause=='' ? '' : ' AND ';
+			$this->search_field_where_clause .= sprintf("{$this->dbprefix}categories.cat_url_title=%s",
+			$this->db->escape($this->EE->TMPL->tagparams['category_url']));
+		}
 
 	}
 
