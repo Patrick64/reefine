@@ -10,7 +10,7 @@
 				value="{filter_value}" />
 		  <input type="submit" name="submit" value="Go" />
 		</form>
-		<!--{url}{filter_value}{filter_active}{filter_quantity}{filter_min_value}{filter_max_value}{filter_min}{filter_max}-->
+		<!--{filter_title}{url}{filter_value}{filter_active}{filter_quantity}{filter_min_value}{filter_max_value}{filter_min}{filter_max}-->
 		{/filters}
 		{/if}
 	{/filter_groups}
@@ -27,7 +27,7 @@
 						{if filter_active}
 
 						<li class="active">
-						<a href="{url}">{filter_value} ({filter_quantity})</a>
+						<a href="{url}">{filter_title} ({filter_quantity})</a>
 						</li>
 						{/if}
 					{/filters}
@@ -35,7 +35,7 @@
 					<li class="active">
 					<a class="remove-filter" href="{clear_url}">
 					{filters}
-					<!--{url}{filter_value}{filter_active}{filter_quantity}{filter_min_value}{filter_max_value}{filter_min}{filter_max}-->
+					<!--{url}{filter_title}{filter_value}{filter_active}{filter_quantity}{filter_min_value}{filter_max_value}{filter_min}{filter_max}-->
 					{if filter_active}{if active_index>0}, {/if}{filter_value}{/if}{/filters}
 					</a>
 					</li>
@@ -62,12 +62,12 @@
 				<input type="submit" name="submit" value="Go" />
 			</form>
 			{if:elseif total_filters > 0 }
-				<h3 class="{filter_url_title}">{label}</h3>
+				<h3 class="">{label}</h3>
 				<ul>
 				{filters}
 					{if filter_quantity > 0}
 					<li class="{if filter_active}active{if:else}inactive{/if}">
-					<a href="{url}">{filter_value} ({filter_quantity})</a>
+					<a href="{url}">{filter_title} ({filter_quantity})</a>
 					</li>
 					{/if}
 				{/filters}

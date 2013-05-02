@@ -68,7 +68,7 @@ class Reefine {
 	 * @var unknown_type
 	 */
 	var $search_field_where_clause='';
-	/** 
+	/**
 	 * current timestamp
 	 * @var unknown_type
 	 */
@@ -239,32 +239,21 @@ class Reefine {
 				$this->return_data = $this->get_tag_data_result($this->entry_id_list );
 				// store in cache
 				$cached = array(
-						//'filter_groups' => $this->filter_groups,
-						//'entry_id_list' => $this->entry_id_list,
 						'return_data' => $this->return_data
 				);
-				//$this->EE->session->set_cache('reefine', $this->filter_id, $cached);
 				$this->cache[$this->filter_id] = $cached;
-
-
 			}
 
-
 		} catch (Exception $e) {
-			$a=3;
-			// Log a test string
+			// Log error
 			$this->EE->logger->log_action($this->class_name . ' error at ' . $_SERVER['REQUEST_URI'] . ': ' . $e->getMessage());
 			$this->return_data = '';
 		}
 
-		$a=1;
 		// set db prefix back
 		$this->EE->db->dbprefix = $this->dbprefix;
 	}
 
-	function hi() {
-		return 'hmm';
-	}
 
 	private function get_theme($theme_name) {
 		if ($theme_name!='') {
@@ -330,7 +319,7 @@ class Reefine {
 		if (!empty($filter_channel)) {
 			$this->channel_ids = $this->get_channel_ids($filter_channel);
 		}
-		
+
 		// read filter:fields="" tag
 		$this->get_field_filters_from_parameters();
 
@@ -356,11 +345,11 @@ class Reefine {
 		// read search:xyz="" tag and create an sql where clause from it.
 		if (count($this->EE->TMPL->search_fields)>0) {
 			$this->search_field_where_clause = $this->get_search_field_where_clause($this->EE->TMPL->search_fields);
-		}	
-		
+		}
+
 		// category_url parameter limits results to just the the category_url
 		if (!empty($this->EE->TMPL->tagparams['category_url'])) {
-			
+				
 			// include categories in select
 			$this->include_categories=true;
 			$this->search_field_where_clause .= $this->search_field_where_clause=='' ? '' : ' AND ';
@@ -462,12 +451,12 @@ class Reefine {
 				foreach ($group['fields'] as &$field) {
 					// get list of possible values
 					$field_column = $this->_custom_fields[$this->site][$field]['field_column'];
-					$results = $this->get_filter_groups_for_list($group_key,$group,$field_column);
+					$results = $this->get_filter_groups_for_list($group_key,$group,$field_column,$field_column);
 
 					$filters = array_merge($filters,$results);
 				}
 				if (count($group['category_group'])>0) {
-					$results = $this->get_filter_groups_for_list($group_key,$group,'cat_name',
+					$results = $this->get_filter_groups_for_list($group_key,$group,'cat_url_title','cat_name',
 							"{$this->dbprefix}categories.group_id IN {$group['cat_group_in_list']}");
 					$filters = array_merge($filters,$results);
 				}
@@ -669,21 +658,22 @@ class Reefine {
 		return $filter_index;
 	}
 
-	private function get_filter_groups_for_list($group_key,&$group,$column_name,$extra_clause = '') {
+	private function get_filter_groups_for_list($group_key,&$group,$column_name,$title_column_name,$extra_clause = '') {
 		// have to give up on active record select coz of this bug: http://stackoverflow.com/questions/7927458/codeigniter-db-select-strange-behavior
 		// if group is multi select then ignore the current filter group in creating the where clause
 		if ($group['join']=='or' || $group['join']=='none')
 			$count_where = $this->get_filter_fields_where_clause($group_key);
-		else
+		else // join is 'and' so use current filter
 			$count_where = $this->filter_where_clause;
 
 		if ($count_where == '') {
-			$sql_filter_count = "entry_id"; //$this->db->select("count(field_id_{$field_id}) as filter_quantity", false);
+			$sql_filter_count = "entry_id";
 		} else {
 			$sql_filter_count = "CASE WHEN {$count_where} THEN entry_id ELSE NULL END as entry_id";
 		}
 
-		$sql = "SELECT {$column_name} as filter_value, {$sql_filter_count} " .
+		$sql = "SELECT {$column_name} as filter_value, " .
+		"{$title_column_name} as filter_title, {$sql_filter_count} " .
 		"FROM {$this->dbprefix}channel_data ";
 			
 		//if ($this->include_channel_titles)
@@ -697,9 +687,9 @@ class Reefine {
 		}
 		if ($extra_clause!='')
 			$sql .= " AND ({$extra_clause}) ";
-		//$sql .= "GROUP BY {$field_column}";
-		$sql = "SELECT filter_value, count(distinct(entry_id)) as filter_quantity ".
-				" FROM ({$sql}) t1 GROUP BY filter_value";
+		// Wrap sql statement in select statement so we can get total of each distinct entry
+		$sql = "SELECT filter_value, filter_title, count(distinct(entry_id)) as filter_quantity ".
+				" FROM ({$sql}) t1 GROUP BY filter_value, filter_title";
 			
 		$results = $this->db->query($sql)->result_array();
 		return $results;
@@ -759,11 +749,11 @@ class Reefine {
 		// hide future entries if neccesary
 		//if ($this->EE->TMPL->fetch_param('show_future_entries') != 'yes')
 		$clauses[] = "entry_date < ".$this->timestamp;
-		
+
 		// add search fields if neccesary
 		if ($this->search_field_where_clause != '')
 			$clauses[] = $this->search_field_where_clause;
-	
+
 		// combine all the clauses with an AND statement
 		if (count($clauses)>0)
 			return implode("\n AND ",$clauses) . "\n";
@@ -879,7 +869,7 @@ class Reefine {
 						}
 					}
 					if (count($group['category_group'])>0)
-						$field_list[] = " ( cat_name IN (" . implode(',',$in_list) . ") AND group_id IN {$group['cat_group_in_list']})";
+						$field_list[] = " ( cat_url_title IN (" . implode(',',$in_list) . ") AND group_id IN {$group['cat_group_in_list']})";
 
 					$clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
 				} else {
@@ -895,7 +885,7 @@ class Reefine {
 							$value_list[] = "entry_id IN (SELECT exp_category_posts.entry_id " .
 							"FROM exp_category_posts " .
 							"JOIN exp_categories USING (cat_id) " .
-							"WHERE cat_name  = {$value} AND group_id IN {$group['cat_group_in_list']} )";
+							"WHERE cat_url_title  = {$value} AND group_id IN {$group['cat_group_in_list']} )";
 
 						$field_list[] = "\n(" . implode("\n OR ",$value_list) . ")";
 					}
@@ -915,7 +905,7 @@ class Reefine {
 						$field_list[] = " `{$field_column}` IN (" . implode(',',$in_list) . ")";
 					}
 					if (count($group['category_group'])>0)
-						$field_list[] = " ( cat_name IN (" . implode(',',$in_list) . ") AND group_id IN {$group['cat_group_in_list']})";
+						$field_list[] = " ( cat_url_title IN (" . implode(',',$in_list) . ") AND group_id IN {$group['cat_group_in_list']})";
 
 					$clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
 				} else {
@@ -936,7 +926,7 @@ class Reefine {
 							$value_list[] = "entry_id IN (SELECT exp_category_posts.entry_id " .
 							"FROM exp_category_posts " .
 							"JOIN exp_categories USING (cat_id) " .
-							"WHERE cat_name  = {$value} AND group_id IN {$group['cat_group_in_list']} )";
+							"WHERE cat_url_title  = {$value} AND group_id IN {$group['cat_group_in_list']} )";
 
 						$field_list[] = "(" . implode(" OR ",$value_list) . ")";
 					}
@@ -965,13 +955,13 @@ class Reefine {
 					if ($sql!='')
 						$sql .= ' AND ';
 					$field_column = $this->_custom_fields[$this->site][$field_name]['field_column'];
-					
+						
 					if (strncmp($terms, '=', 1) ==  0)
 					{
 						/** ---------------------------------------
 						 /**  Exact Match e.g.: search:body="=pickle"
 						 /** ---------------------------------------*/
-						
+
 						$terms = substr($terms, 1);
 
 						// special handling for IS_EMPTY
@@ -1059,7 +1049,12 @@ class Reefine {
 		return $sql;
 	}
 
-
+	/**
+	 * Parse the url based on the url template (url="") from the reefine tag
+	 * Returns an array of url segments organised by filter group
+	 * @param string $url_template
+	 * @param array $url
+	 */
 	private function parse_search_url($url_template,$url) {
 		/*
 		 * url consists of filters parameters and dividers
