@@ -467,8 +467,8 @@ class Reefine {
 					$filters = array_merge($filters,$results);
 				}
 				if (count($group['category_group'])>0) {
-					$results = $this->get_filter_groups_for_list($group_key,$group,'cat_name',
-							"{$this->dbprefix}categories.group_id IN {$group['cat_group_in_list']}");
+					$results = $this->get_filter_groups_for_list($group_key,$group,"cat_{$group_key}.cat_name",
+							"cat_{$group_key}.group_id IN {$group['cat_group_in_list']}");
 					$filters = array_merge($filters,$results);
 				}
 			} else if ($group['type']=='search') {
@@ -490,15 +490,14 @@ class Reefine {
 					// ignore the current filter group in creating the where clause
 					$where_clause_excluding_group = $this->get_filter_fields_where_clause($group_key);
 
-					$sql = "SELECT count(distinct(entry_id)) as filter_quantity, " .
+					$sql = "SELECT count(distinct({$this->dbprefix}channel_data.entry_id)) as filter_quantity, " .
 							"min(CAST({$field_column} AS DECIMAL(5,2))) as filter_min, " .
 							"max(CAST({$field_column} AS DECIMAL(5,2))) as filter_max " .
 							"FROM {$this->dbprefix}channel_data ";
 					//if ($this->include_channel_titles)
-					$sql .= "JOIN {$this->dbprefix}channel_titles USING (entry_id) ";
+					$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
 					if ($this->include_categories)
-						$sql .= "LEFT OUTER JOIN {$this->dbprefix}category_posts USING (entry_id)
-						LEFT OUTER JOIN {$this->dbprefix}categories USING (cat_id) ";
+						$sql .= $this->get_category_join_sql();
 					$sql .= "WHERE {$field_column} <> '' ";
 					if (isset($this->channel_ids)) {
 						$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->channel_ids) . ")";
@@ -678,19 +677,18 @@ class Reefine {
 			$count_where = $this->filter_where_clause;
 
 		if ($count_where == '') {
-			$sql_filter_count = "entry_id"; //$this->db->select("count(field_id_{$field_id}) as filter_quantity", false);
+			$sql_filter_count = "{$this->dbprefix}channel_data.entry_id"; //$this->db->select("count(field_id_{$field_id}) as filter_quantity", false);
 		} else {
-			$sql_filter_count = "CASE WHEN {$count_where} THEN entry_id ELSE NULL END as entry_id";
+			$sql_filter_count = "CASE WHEN {$count_where} THEN {$this->dbprefix}channel_data.entry_id ELSE NULL END as entry_id";
 		}
 
 		$sql = "SELECT {$column_name} as filter_value, {$sql_filter_count} " .
 		"FROM {$this->dbprefix}channel_data ";
 			
 		//if ($this->include_channel_titles)
-		$sql .= "JOIN {$this->dbprefix}channel_titles USING (entry_id) ";
+		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
 		if ($this->include_categories)
-			$sql .= "LEFT OUTER JOIN {$this->dbprefix}category_posts USING (entry_id) \n" .
-			"LEFT OUTER JOIN {$this->dbprefix}categories USING (cat_id) \n";
+			$sql .= $this->get_category_join_sql();
 		$sql .= "WHERE {$column_name} <> '' ";
 		if (isset($this->channel_ids)) {
 			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->channel_ids) . ")";
@@ -704,15 +702,28 @@ class Reefine {
 		$results = $this->db->query($sql)->result_array();
 		return $results;
 	}
+	
+	private function get_category_join_sql() {
+		$joins = array();
+		foreach($this->filter_groups as $index => $group) {
+			if (count($group['category_group']) > 0) {
+				$cat_group_in_list = $group['cat_group_in_list'];
+				$joins[] = "LEFT OUTER JOIN {$this->dbprefix}category_posts catp_{$index} " .
+				"ON catp_{$index}.entry_id = {$this->dbprefix}channel_data.entry_id \n" .
+				"LEFT OUTER JOIN {$this->dbprefix}categories cat_{$index} " .
+				"ON cat_{$index}.cat_id = catp_{$index}.cat_id AND cat_{$index}.group_id IN {$cat_group_in_list} \n" ;
+			}
+		}	
+		return implode('',$joins);
+	}
 
 	private function get_entry_ids_from_database() {
 		$sql = "SELECT DISTINCT({$this->dbprefix}channel_data.entry_id) " .
 		"FROM {$this->dbprefix}channel_data ";
 		//if ($this->include_channel_titles)
-		$sql .= "JOIN {$this->dbprefix}channel_titles USING (entry_id) ";
+		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
 		if ($this->include_categories)
-			$sql .= "LEFT OUTER JOIN {$this->dbprefix}category_posts USING (entry_id)
-			LEFT OUTER JOIN {$this->dbprefix}categories USING (cat_id) ";
+			$sql .= $this->get_category_join_sql();
 		$sql .= ' WHERE 1=1 ';
 
 		// make all the where sql statements for building the query
@@ -852,7 +863,7 @@ class Reefine {
 		$clauses = array();
 		if (!isset($group['category_group']))
 			$group['category_group']=array();
-
+		$group_name = $group['group_name'];
 
 		// channel fields
 		if (isset($group['fields'])) {
@@ -879,7 +890,7 @@ class Reefine {
 						}
 					}
 					if (count($group['category_group'])>0)
-						$field_list[] = " ( cat_name IN (" . implode(',',$in_list) . ") AND group_id IN {$group['cat_group_in_list']})";
+						$field_list[] = " ( cat_{$group_name}.cat_name IN (" . implode(',',$in_list) . ") AND cat_{$group_name}.group_id IN {$group['cat_group_in_list']})";
 
 					$clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
 				} else {
@@ -892,7 +903,7 @@ class Reefine {
 						}
 
 						if (count($group['category_group'])>0)
-							$value_list[] = "entry_id IN (SELECT exp_category_posts.entry_id " .
+							$value_list[] = "{$this->dbprefix}channel_data.entry_id IN (SELECT exp_category_posts.entry_id " .
 							"FROM exp_category_posts " .
 							"JOIN exp_categories USING (cat_id) " .
 							"WHERE cat_name  = {$value} AND group_id IN {$group['cat_group_in_list']} )";
@@ -915,7 +926,7 @@ class Reefine {
 						$field_list[] = " `{$field_column}` IN (" . implode(',',$in_list) . ")";
 					}
 					if (count($group['category_group'])>0)
-						$field_list[] = " ( cat_name IN (" . implode(',',$in_list) . ") AND group_id IN {$group['cat_group_in_list']})";
+						$field_list[] = " ( cat_{$group_name}.cat_name IN (" . implode(',',$in_list) . ") AND cat_{$group_name}.group_id IN {$group['cat_group_in_list']})";
 
 					$clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
 				} else {
