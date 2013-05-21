@@ -629,7 +629,9 @@ class Reefine {
 						// ccreate a new filter
 						$filters[] = array(
 								'filter_value' => $filter_value_sub,
-								'filter_quantity' => $filter['filter_quantity']);
+								'filter_quantity' => $filter['filter_quantity'],
+								'filter_title' => $filter_value_sub
+						);
 						$filter_index[$filter_value_sub] = count($filters)-1;
 					} else {
 						// just add count to an existing filter
@@ -639,14 +641,19 @@ class Reefine {
 
 			}
 		}
+		$reorder_required = false;
 		foreach ($filters as $key => &$filter) {
 			// see if it has a delimiter first
 			if (strpos($filter['filter_value'],$delimiter)!==false) {
 				// remove this filter as it's a compound one
 				unset($filters[$key]);
 				//array_splice($filters,$key,1);
+				$reorder_required=true;
 			}
 		}
+		if ($reorder_required)
+			$filters = array_values($filters);
+		
 
 	}
 
