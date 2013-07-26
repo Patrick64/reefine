@@ -491,8 +491,8 @@ class Reefine {
 					$where_clause_excluding_group = $this->get_filter_fields_where_clause($group_key);
 
 					$sql = "SELECT count(distinct(entry_id)) as filter_quantity, " .
-							"min(CAST({$field_column} AS DECIMAL(5,2))) as filter_min, " .
-							"max(CAST({$field_column} AS DECIMAL(5,2))) as filter_max " .
+							"min(CAST({$field_column} AS DECIMAL(16,2))) as filter_min, " .
+							"max(CAST({$field_column} AS DECIMAL(16,2))) as filter_max " .
 							"FROM {$this->dbprefix}channel_data ";
 					//if ($this->include_channel_titles)
 					$sql .= "JOIN {$this->dbprefix}channel_titles USING (entry_id) ";
@@ -780,11 +780,11 @@ class Reefine {
 				$field_column = $this->_custom_fields[$this->site][$field_name]['field_column'];
 				if (isset($group['values']['min']) && is_numeric($group['values']['min'])) {
 					$value = $this->db->escape_str($group['values']['min']);
-					$clauses[] = "CAST(`{$field_column}` AS DECIMAL(5,2)) >= $value";
+					$clauses[] = "CAST(`{$field_column}` AS DECIMAL(16,2)) >= $value";
 				}
 				if (isset($group['values']['max']) && is_numeric($group['values']['max'])) {
 					$value = $this->db->escape_str($group['values']['max']);
-					$clauses[] = "CAST(`{$field_column}` AS DECIMAL(5,2)) <= $value";
+					$clauses[] = "CAST(`{$field_column}` AS DECIMAL(16,2)) <= $value";
 				}
 			}
 		}
