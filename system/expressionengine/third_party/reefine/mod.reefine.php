@@ -74,6 +74,11 @@ class Reefine {
 	 */
 	var $timestamp;
 	/**
+	 * String to append to url that isnt related to Reefine. Will be the page offset eg "/P6"
+	 * @var unknown
+	 */
+	var $url_suffix = '';
+	/**
 	 * @var array default settings for group if not otherwise specified
 	 */
 	var $default_group_by_type = array(
@@ -105,6 +110,8 @@ class Reefine {
 			),
 
 	);
+	
+	
 
 	function __construct()
 	{
@@ -166,6 +173,11 @@ class Reefine {
 				}
 				if (strpos($this->url,'/')!==0)
 					$this->url = '/'.$this->url;
+				
+				if (preg_match('/\/P(\d+)$/', $this->url, $matches)) {
+					$this->url_suffix = $matches[0]; 
+					$this->url = preg_replace('/\/P(\d+)$/', '', $this->url);
+				}
 				$this->filter_values = $this->parse_search_url($this->url_tag,$this->url);
 
 			}
@@ -186,7 +198,7 @@ class Reefine {
 
 					if ($value !== false) {
 						$url = $this->get_filter_url($group_name,$value);
-						$this->EE->functions->redirect($url);
+						$this->EE->functions->redirect($this->EE->functions->create_url($url));
 						return;
 					}
 					if ($group['type']=='number_range') {
@@ -200,8 +212,7 @@ class Reefine {
 							if ($value_max !== false && $value_max != '')
 								$value_range['max']=$value_max;
 							$url = $this->get_filter_url($group_name,$value_range);
-							//$url = $this->EE->functions->create_url($url);
-							$this->EE->functions->redirect($url);
+							$this->EE->functions->redirect($this->EE->functions->create_url($url));
 							return;
 						}
 					}
@@ -287,16 +298,17 @@ class Reefine {
 	 */
 	private function change_uri_for_paging() {
 		// if there are no filters then build an url with /any/any.. on it so /Pxx is in the right segment
-		$unfiltered_url =  $this->get_filter_url();
+		$unfiltered_url = $this->get_filter_url();
 		if (count($this->filter_values)==0 && strpos($this->url,$unfiltered_url)===false)
-			$url = $this->get_filter_url();
+			$url = $unfiltered_url;
 		else
 			$url = $this->url;
 
-		$this->EE->router->uri->page_query_string = $url;
-		$this->EE->router->uri->uri_string = $url;
-		$this->EE->uri->page_query_string = $url;
-		$this->EE->uri->uri_string = $url;
+		$this->EE->uri->uri_string = $url . $this->url_suffix;
+		$this->EE->uri->segments = explode('/',trim($url,'/'));
+		// add suffix to query string which is used for paging
+		$this->EE->uri->page_query_string = $url . $this->url_suffix;  
+		
 	}
 
 	private function html_encode_filters() {
@@ -1172,10 +1184,10 @@ class Reefine {
 		foreach ($this->filter_groups as $group_name => &$group) {
 			if ($group['type']=='list') {
 				foreach ($group['filters'] as &$filter) {
-					$filter['url'] = $this->get_filter_url($group_name,$filter['filter_value']);
+					$filter['url'] = $this->EE->functions->create_url($this->get_filter_url($group_name,$filter['filter_value']));
 				}
 			}
-			$group['clear_url'] = $this->get_filter_url($group_name,null);
+			$group['clear_url'] = $this->EE->functions->create_url($this->get_filter_url($group_name,null));
 		}
 	}
 
@@ -1239,9 +1251,10 @@ class Reefine {
 			}
 		}
 		// add a leading slash if one isn't provided
-		//if (strpos($result,'/')!==0 && strpos($result,'http://')!==0 && strpos($result,'https://')!==0)
-		//$reslut = '/' . $result;
-		$result=$this->EE->functions->create_url($result);
+		if (strpos($result,'/')!==0 && strpos($result,'http://')!==0 && strpos($result,'https://')!==0) {
+			$result = '/' . $result;
+		}
+		//$result=$this->EE->functions->create_url($result);
 		return $result;
 	}
 
