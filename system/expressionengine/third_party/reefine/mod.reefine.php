@@ -68,6 +68,7 @@ class Reefine {
 	 * @var unknown_type
 	 */
 	var $search_field_where_clause='';
+	
 	/**
 	 * current timestamp
 	 * @var unknown_type
@@ -842,6 +843,7 @@ class Reefine {
 
 	//
 	private function get_where_clause_for_search($key,&$group) {
+		$group_name = $group['group_name'];
 		$clauses = array();
 		if (isset($group['fields']) && count($group['values'])>0) {
 			$search_terms = array();
@@ -854,7 +856,7 @@ class Reefine {
 				}
 				foreach ($group['category_group'] as $cat_group) {
 					$cat_group = $this->db->escape_str($cat_group);
-					$words[] = " ( cat_name LIKE '%{$value}%' AND {$this->dbprefix}categories.group_id={$cat_group} )";
+					$words[] = " ( cat_{$group_name}.cat_name LIKE '%{$value}%' AND cat_{$group_name}.group_id={$cat_group} )";
 				}
 
 				$search_terms[] = '(' . implode(' OR ',$words) . ')';
