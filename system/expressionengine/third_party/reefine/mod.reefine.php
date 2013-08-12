@@ -1171,7 +1171,7 @@ class Reefine {
 					}
 					// value has been urlencoded so deencode the url
 					foreach ($filter_values[$group_name] as &$filter_value) {
-						$filter_value = urldecode($filter_value);
+						$filter_value = $this->urldecode($filter_value);
 					}
 					// if a search on title is being performed then add a flag to include the
 					// channel_titles table in sql queries
@@ -1254,11 +1254,11 @@ class Reefine {
 				} else {
 					$url_value = implode($or_text,$values);
 				}
-				$url_value = urlencode($url_value);
+				$url_value = $this->urlencode($url_value);
 				$result = str_replace($tag['tag'],$url_value,$result);
 
 			} else {
-				$result = str_replace($tag['tag'],urlencode($any_text),$result);
+				$result = str_replace($tag['tag'],$this->urlencode($any_text),$result);
 			}
 		}
 		// add a leading slash if one isn't provided
@@ -1267,6 +1267,15 @@ class Reefine {
 		}
 		//$result=$this->EE->functions->create_url($result);
 		return $result;
+	}
+	
+	private function urlencode($value) {
+		// double encode URL
+		return str_replace('%', '%40', urlencode($value)); 
+	}
+	
+	private function urldecode($value) {
+		return urldecode(str_replace('@','%',$value));
 	}
 
 	/**
