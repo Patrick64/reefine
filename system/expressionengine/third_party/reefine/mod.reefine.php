@@ -895,7 +895,7 @@ class Reefine {
 					foreach ($group['fields'] as $field_name) {
 						$field_column = $this->_custom_fields[$this->site][$field_name]['field_column'];
 						foreach ($in_list as $value) {
-							$field_list[] = " find_in_set({$value}, replace(`{$field_column}`, {$delimiter}, ','))";
+							$field_list[] = " instr(concat({$delimiter},`{$field_column}`,{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
 						}
 					}
 					if (count($group['category_group'])>0)
@@ -908,7 +908,7 @@ class Reefine {
 						$value_list = array();
 						foreach ($group['fields'] as $field_name) {
 							$field_column = $this->_custom_fields[$this->site][$field_name]['field_column'];
-							$value_list[] = " find_in_set({$value}, replace(`{$field_column}`, {$delimiter}, ','))";
+							$value_list[] = " instr(concat({$delimiter},`{$field_column}`,{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
 						}
 
 						if (count($group['category_group'])>0)
@@ -1277,7 +1277,7 @@ class Reefine {
 	}
 	
 	private function urldecode($value) {
-		return urldecode(str_replace('@','%',$value));
+		return urldecode(str_replace('@','%',str_replace('%40','%',$value)));
 	}
 
 	/**
