@@ -953,7 +953,7 @@ class Reefine {
 							$value_list[] = " `{$field_column}` = {$value}";
 						}
 						if (count($group['category_group'])>0)
-							$value_list[] = "entry_id IN (SELECT exp_category_posts.entry_id " .
+							$value_list[] = "{$this->dbprefix}channel_data.entry_id IN (SELECT exp_category_posts.entry_id " .
 							"FROM exp_category_posts " .
 							"JOIN exp_categories USING (cat_id) " .
 							"WHERE cat_url_title  = {$value} AND group_id IN {$group['cat_group_in_list']} )";
