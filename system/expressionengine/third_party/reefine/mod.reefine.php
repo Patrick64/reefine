@@ -361,10 +361,10 @@ class Reefine {
 		// category_url parameter limits results to just the the category_url
 		if (!empty($this->EE->TMPL->tagparams['category_url'])) {
 				
-			// include categories in select
-			$this->include_categories=true;
+			// include categories in select using a global category table that is left joined
+			$this->include_categories=true; // yes to joining a global category table
 			$this->search_field_where_clause .= $this->search_field_where_clause=='' ? '' : ' AND ';
-			$this->search_field_where_clause .= sprintf("{$this->dbprefix}categories.cat_url_title=%s",
+			$this->search_field_where_clause .= sprintf("global_cat.cat_url_title=%s",
 			$this->db->escape($this->EE->TMPL->tagparams['category_url']));
 		}
 
@@ -382,7 +382,6 @@ class Reefine {
 			$this->add_filter_group_setting($group_name, 'category_group', array(), 'array');
 			if (count($group['category_group'])>0) {
 				$group['cat_group_in_list'] = $this->array_to_in_list($group['category_group']);
-				$this->include_categories = true;
 			}
 
 
@@ -496,8 +495,7 @@ class Reefine {
 							"FROM {$this->dbprefix}channel_data ";
 					//if ($this->include_channel_titles)
 					$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
-					if ($this->include_categories)
-						$sql .= $this->get_category_join_sql();
+					$sql .= $this->get_category_join_sql();
 					$sql .= "WHERE {$field_column} <> '' ";
 					if (isset($this->channel_ids)) {
 						$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->channel_ids) . ")";
@@ -695,8 +693,7 @@ class Reefine {
 			
 		//if ($this->include_channel_titles)
 		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
-		if ($this->include_categories)
-			$sql .= $this->get_category_join_sql();
+		$sql .= $this->get_category_join_sql();
 		$sql .= "WHERE {$column_name} <> '' ";
 		if (isset($this->channel_ids)) {
 			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->channel_ids) . ")";
@@ -721,7 +718,14 @@ class Reefine {
 				"LEFT OUTER JOIN {$this->dbprefix}categories cat_{$index} " .
 				"ON cat_{$index}.cat_id = catp_{$index}.cat_id AND cat_{$index}.group_id IN {$cat_group_in_list} \n" ;
 			}
-		}	
+		}
+		// also left outer join categories
+		if ($this->include_categories)
+			$joins[] = "LEFT OUTER JOIN {$this->dbprefix}category_posts global_catp " .
+			"ON global_catp.entry_id = {$this->dbprefix}channel_data.entry_id \n" .
+			"LEFT OUTER JOIN {$this->dbprefix}categories global_cat " .
+			"ON global_cat.cat_id = global_catp.cat_id \n" ;
+		
 		return implode('',$joins);
 	}
 
@@ -730,8 +734,7 @@ class Reefine {
 		"FROM {$this->dbprefix}channel_data ";
 		//if ($this->include_channel_titles)
 		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
-		if ($this->include_categories)
-			$sql .= $this->get_category_join_sql();
+		$sql .= $this->get_category_join_sql();
 		$sql .= ' WHERE 1=1 ';
 
 		// make all the where sql statements for building the query
