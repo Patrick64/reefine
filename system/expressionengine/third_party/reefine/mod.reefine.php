@@ -474,10 +474,12 @@ class Reefine {
 				if (isset($group['values']) && count($group['values'])>0)
 					$filters[] = array(
 							'filter_value'=> $group['values'][0],
+							'filter_title'=> $group['values'][0],
 							'filter_quantity'=>1);
 				else
 					$filters[] = array(
 							'filter_value'=> '',
+							'filter_title' => '',
 							'filter_quantity'=>0);
 			} else if ($group['type']=='number_range') {
 				// get min/max ranges for number
