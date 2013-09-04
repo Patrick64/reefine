@@ -1259,13 +1259,13 @@ class Reefine {
 					else if (isset($values['min']) && isset($values['max']))
 						$url_value = $values['min'].$tag['or_text'].$values['max']; // x to y
 				} else {
-					$url_value = implode($or_text,$values);
+					$url_value = implode($or_text,$this->urlencode_array($values));
 				}
-				$url_value = $this->urlencode($url_value);
+				//$url_value = $this->urlencode($url_value);
 				$result = str_replace($tag['tag'],$url_value,$result);
 
 			} else {
-				$result = str_replace($tag['tag'],$this->urlencode($any_text),$result);
+				$result = str_replace($tag['tag'],$any_text,$result);
 			}
 		}
 		// add a leading slash if one isn't provided
@@ -1280,6 +1280,19 @@ class Reefine {
 		// double encode URL
 		return str_replace('%', '%40', urlencode($value)); 
 	}
+	
+	/**
+	 * Double encode all values in an array using urlencode
+	 * @param unknown $arr
+	 * @return mixed|multitype:
+	 */
+	private function urlencode_array($arr) {
+		foreach ($arr as &$value) {
+			$value = $this->urlencode($value);
+		}
+		return $arr;
+	}
+	
 	
 	private function urldecode($value) {
 		return urldecode(str_replace('@','%',str_replace('%40','%',$value)));
@@ -1537,34 +1550,6 @@ class Reefine {
 		return false;
 	}
 
-	public function testEE() {
-		$tag = array(
-				'colour' =>
-				array(
-						array('data'=>array(
-								array('hex'=>'#00f','text'=>'blue'),
-								array('hex'=>'#0f0','text'=>'green')
-						)
-						)
-				),
-		);
-		$tag = array($tag);
-
-		return $this->parse_variables_fix($this->EE->TMPL->tagdata, $tag);
-		//return $this->EE->TMPL->parse_variables($this->EE->TMPL->tagdata,$tag);
-	}
-
-	private function parse_variables_fix($tagdata,$tag) {
-		//return $this->EE->TMPL->parse_variables($result,$tag);
-		foreach ($tag[0] as $tag_name => &$tag_value) {
-			preg_match_all('/\{' . preg_quote($tag_name) . '\}[\s\S]+?\{\/' . preg_quote($tag_name) . '\}/',$tagdata,$matches);
-			for ($i=0;$i<count($matches[0]);$i+=1) {
-				$parsed = $this->EE->TMPL->parse_variables($matches[0][$i],$tag);
-				$tagdata = str_replace($matches[0][$i],$parsed,$tagdata);
-			}
-		}
-		return $tagdata;
-	}
 
 
 
