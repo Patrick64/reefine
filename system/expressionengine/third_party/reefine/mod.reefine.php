@@ -273,7 +273,14 @@ class Reefine {
 			if (file_exists($filepath))
 			{
 				include_once $filepath;
-				$theme_class = 'Reefine_theme_' . $theme_name;
+				// if using legacy reefine theme
+				if (class_exists('Reefine_theme_' . $theme_name))
+					$theme_class = 'Reefine_theme_' . $theme_name;
+				else if (class_exists('Reefine_theme_custom'))
+					$theme_class = 'Reefine_theme_custom';
+				else // No theme class found
+					return new Reefine_theme($this);
+				// return custom theme
 				return new $theme_class($this);
 			}
 		}
