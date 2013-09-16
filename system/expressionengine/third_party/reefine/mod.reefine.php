@@ -114,7 +114,7 @@ class Reefine {
 
 	function __construct()
 	{
-
+		
 		// Make a local reference to the ExpressionEngine super object
 		$this->EE =& get_instance();
 		$this->EE->load->library('logger');
@@ -262,6 +262,7 @@ class Reefine {
 
 		// set db prefix back
 		$this->EE->db->dbprefix = $this->dbprefix;
+		
 	}
 
 
@@ -345,6 +346,7 @@ class Reefine {
 
 		// go through all filter groups to check for settings int tag parameters
 		$this->add_all_filter_group_settings();
+		/*
 		foreach ($this->filter_groups as $group_name => &$group) {
 			if (isset($group['fields'])) {
 				foreach ($group['fields'] as $field) {
@@ -353,6 +355,7 @@ class Reefine {
 				}
 			}
 		}
+		*/
 		// read search:xyz="" tag and create an sql where clause from it.
 		if (count($this->EE->TMPL->search_fields)>0) {
 			$this->search_field_where_clause = $this->get_search_field_where_clause($this->EE->TMPL->search_fields);
@@ -367,13 +370,27 @@ class Reefine {
 			$this->search_field_where_clause .= sprintf("global_cat.cat_url_title=%s",
 			$this->db->escape($this->EE->TMPL->tagparams['category_url']));
 		}
+		
+
 
 	}
-
+	/**
+	 * get settings from tag parameters
+	 */
 	private function add_all_filter_group_settings() {
 		foreach ($this->filter_groups as $group_name => &$group) {
-			// get settings from tag parameters
-			$this->add_filter_group_setting($group_name, 'fields', array(), 'array');
+
+			
+			// if group doesnt have fields assign it as an empty array	
+			if (!isset($group['fields']))
+				$group['fields'] = array();
+				
+			// get all field names in param
+			$field_names = $this->get_filter_group_setting($group_name, 'fields', array(), 'array');
+			foreach ($field_names as $field_name) {
+				$group['fields'][] = $this->get_field_obj($field_name);
+			}
+			// add rest of settings which are strings/arrays/booleans
 			$this->add_filter_group_setting($group_name, 'label', $group_name);
 			$this->add_filter_group_setting($group_name, 'type', 'list');
 			$this->add_filter_group_setting($group_name, 'delimiter', '');
@@ -398,24 +415,39 @@ class Reefine {
 	* @param unknown_type $type data type: array, bool or text
 	*/
 	private function add_filter_group_setting($group_name, $key, $default, $type = 'text' ) {
+		// if the filter group already contains a value for this key then this is the new default.
+		// this would be set from get_field_filters_from_parameters function
+		if (isset($this->filter_groups[$group_name][$key])) {
+			$default = $this->filter_groups[$group_name][$key];
+		}
+		$result = $this->get_filter_group_setting($group_name, $key, $default, $type);
+		$this->filter_groups[$group_name][$key] = $result;
+
+	}
+	
+	/**
+	 * Gets array/string/boolean from filter:group_name:key="" tag
+	 * @param string $group_name
+	 * @param unknown $key
+	 * @param unknown $default
+	 * @param string $type
+	 * @return Ambigous <unknown, boolean, multitype:>
+	 */
+	private function get_filter_group_setting($group_name, $key, $default, $type = 'text') {
 		$tag = 'filter:' . $group_name . ':' . $key;
 		if (!isset($this->EE->TMPL->tagparams[$tag])) {
-			if (isset($this->filter_groups[$group_name][$key]))
-				$result = $this->filter_groups[$group_name][$key];
-			else
-				$result = $default;
+			$result = $default;
 		} else {
 			if ($type=='array') {
 				$result = explode('|',$this->EE->TMPL->fetch_param($tag));
 			} else if ($type=='bool') {
 				$result = $this->EE->TMPL->fetch_param($tag);
 				$result = ($result == 'yes' ? true : false);
-			} else {
+			} else { // text
 				$result = $this->EE->TMPL->fetch_param($tag);
 			}
 		}
-		$this->filter_groups[$group_name][$key] = $result;
-
+		return $result;
 	}
 
 
@@ -424,34 +456,35 @@ class Reefine {
 
 		$fields_tag = $this->EE->TMPL->fetch_param('filter:fields','');
 		if (!empty($fields_tag)) {
-			foreach (explode('|',$fields_tag) as $field)
+			foreach (explode('|',$fields_tag) as $field_name)
 			{
-
-				if (isset($this->_custom_fields[$this->site][$field])) {
-					$label = $this->_custom_fields[$this->site][$field]['field_label'];
-					$ee_type = $this->_custom_fields[$this->site][$field]['field_type'];
-					if ($field == 'title')
-						$default = $this->default_group_by_type['title'];
-					else if (isset($this->default_group_by_type[$ee_type]))
-						$default = $this->default_group_by_type[$ee_type];
-					else
-						$default = $this->default_group_by_type['text'];
-					$this->filter_groups[$field] = array(
-							'group_name' => $field,
-							'fields' => array($field),
-							'label' => isset($default['label']) ? $default['label'] : $label,
-							'type'=>$default['type'],
-							'join'=>$default['join'],
-							'delimiter'=>$default['delimiter']
-					);
-				}
+				$field = $this->get_field_obj($field_name);
+				
+				if ($field == 'title')
+					$default = $this->default_group_by_type['title'];
+				else if (isset($this->default_group_by_type[$field->ee_type]))
+					$default = $this->default_group_by_type[$field->ee_type];
+				else
+					$default = $this->default_group_by_type['text'];
+				$group_name = str_replace(':','_',$field_name);
+				$this->filter_groups[$field_name] = array(
+						'group_name' => $group_name,
+						'fields' => array($field),
+						'label' => isset($default['label']) ? $default['label'] : $field->field_label,
+						'type'=>$default['type'],
+						'join'=>$default['join'],
+						'delimiter'=>$default['delimiter']
+				);
+			
 
 			}
 		}
 	}
 
-	// create $this->filter_groups[..]['filters'] array
-	// will contain a list of possible values for each filter group
+	/**
+	 * create $this->filter_groups[..]['filters'] array
+	 * will contain a list of possible values for each filter group
+	 */
 	private function set_filter_groups() {
 		$this->filter_where_clause = $this->get_filter_fields_where_clause();
 		foreach ($this->filter_groups as $group_key => &$group) {
@@ -460,9 +493,7 @@ class Reefine {
 				// for each field in the filter group
 				foreach ($group['fields'] as &$field) {
 					// get list of possible values
-					$field_column = $this->_custom_fields[$this->site][$field]['field_column'];
-					$results = $this->get_filter_groups_for_list($group_key,$group,$field_column,$field_column);
-
+					$results = $this->get_filter_groups_for_list($group_key,$group,$field->column_name,$field->title_column_name);
 					$filters = array_merge($filters,$results);
 				}
 				if (count($group['category_group'])>0) {
@@ -485,25 +516,22 @@ class Reefine {
 				// get min/max ranges for number
 				// for each field in the filter group
 				foreach ($group['fields'] as &$field) {
-
-					$field_column = $this->_custom_fields[$this->site][$field]['field_column'];
-
-					// ignore the current filter group in creating the where clause
-					$where_clause_excluding_group = $this->get_filter_fields_where_clause($group_key);
-
+							
 					$sql = "SELECT count(distinct({$this->dbprefix}channel_data.entry_id)) as filter_quantity, " .
-							"min(CAST({$field_column} AS DECIMAL(16,2))) as filter_min, " .
-							"max(CAST({$field_column} AS DECIMAL(16,2))) as filter_max " .
+							"min(CAST({$field->column_name} AS DECIMAL(16,2))) as filter_min, " .
+							"max(CAST({$field->column_name} AS DECIMAL(16,2))) as filter_max " .
 							"FROM {$this->dbprefix}channel_data ";
 					//if ($this->include_channel_titles)
 					$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
-					$sql .= $this->get_category_join_sql();
-					$sql .= "WHERE {$field_column} <> '' ";
+					$sql .= $this->get_query_join_sql($group_key);
+					$sql .= "WHERE {$field->column_name} <> '' ";
 					if (isset($this->channel_ids)) {
 						$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->channel_ids) . ")";
 					}
+					// ignore the current filter group in creating the where clause
+					$where_clause_excluding_group = $this->get_filter_fields_where_clause($group_key);
 					if ($where_clause_excluding_group !='')
-						$sql .= "AND " . $this->get_filter_fields_where_clause($group_key);
+						$sql .= "AND " . $where_clause_excluding_group;
 					$results = $this->db->query($sql)->result_array();
 					if (count($results)==0)
 						$filters[] = array(
@@ -695,7 +723,7 @@ class Reefine {
 			
 		//if ($this->include_channel_titles)
 		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
-		$sql .= $this->get_category_join_sql();
+		$sql .= $this->get_query_join_sql($group_key);
 		$sql .= "WHERE {$column_name} <> '' ";
 		if (isset($this->channel_ids)) {
 			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->channel_ids) . ")";
@@ -710,7 +738,12 @@ class Reefine {
 		return $results;
 	}
 	
-	private function get_category_join_sql() {
+	/**
+	 * Get SQL for joins that are required.
+	 * @param string $include_group Always include this group in the joins
+	 * @return string
+	 */
+	private function get_query_join_sql($include_group) {
 		$joins = array();
 		foreach($this->filter_groups as $index => $group) {
 			if (count($group['category_group']) > 0) {
@@ -726,9 +759,21 @@ class Reefine {
 			$joins[] = "LEFT OUTER JOIN {$this->dbprefix}category_posts global_catp " .
 			"ON global_catp.entry_id = {$this->dbprefix}channel_data.entry_id \n" .
 			"LEFT OUTER JOIN {$this->dbprefix}categories global_cat " .
-			"ON global_cat.cat_id = global_catp.cat_id \n" ;
-		
-		return implode('',$joins);
+			"ON global_cat.cat_id = global_catp.cat_id " ;
+
+		// add joins for custom fields.
+		foreach ($this->filter_groups as $key => &$group) {
+			// If group has values
+			if ($key==$include_group || (isset($group['values']) && count($group['values']>0))) {
+				foreach ($group['fields'] as $field) {
+					if ($field->join_sql!='')
+						$joins[] = $field->join_sql;
+				}	
+			}
+		}
+		// remove duplicates
+		$joins = array_map("unserialize", array_unique(array_map("serialize", $joins)));		
+		return implode("\n",$joins);
 	}
 
 	private function get_entry_ids_from_database() {
@@ -736,7 +781,7 @@ class Reefine {
 		"FROM {$this->dbprefix}channel_data ";
 		//if ($this->include_channel_titles)
 		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
-		$sql .= $this->get_category_join_sql();
+		$sql .= $this->get_query_join_sql('');
 		$sql .= ' WHERE 1=1 ';
 
 		// make all the where sql statements for building the query
@@ -800,15 +845,15 @@ class Reefine {
 		$clauses = array();
 		if (isset($group['fields']) && count($group['values'])>0) {
 
-			foreach ($group['fields'] as $field_name) {
-				$field_column = $this->_custom_fields[$this->site][$field_name]['field_column'];
+			foreach ($group['fields'] as $field) {
+				
 				if (isset($group['values']['min']) && is_numeric($group['values']['min'])) {
 					$value = $this->db->escape_str($group['values']['min']);
-					$clauses[] = "CAST(`{$field_column}` AS DECIMAL(16,2)) >= $value";
+					$clauses[] = "CAST({$field->column_name} AS DECIMAL(16,2)) >= $value";
 				}
 				if (isset($group['values']['max']) && is_numeric($group['values']['max'])) {
 					$value = $this->db->escape_str($group['values']['max']);
-					$clauses[] = "CAST(`{$field_column}` AS DECIMAL(16,2)) <= $value";
+					$clauses[] = "CAST({$field->column_name} AS DECIMAL(16,2)) <= $value";
 				}
 			}
 		}
@@ -855,9 +900,8 @@ class Reefine {
 			foreach (explode(' ',$group['values'][0]) as $value) {
 				$words = array();
 				$value = $this->db->escape_like_str($value);
-				foreach ($group['fields'] as $field_name) {
-					$field_column = $this->_custom_fields[$this->site][$field_name]['field_column'];
-					$words[] = " `{$field_column}` LIKE '%{$value}%'";
+				foreach ($group['fields'] as $field) {
+					$words[] = " `{$field->column_name}` LIKE '%{$value}%'";
 				}
 				foreach ($group['category_group'] as $cat_group) {
 					$cat_group = $this->db->escape_str($cat_group);
@@ -897,10 +941,9 @@ class Reefine {
 				if ($group['join']=='or' || $group['join']=='none') {
 					// at least one value must be in the listed fields or category groups and search within delimiters
 					$field_list = array();
-					foreach ($group['fields'] as $field_name) {
-						$field_column = $this->_custom_fields[$this->site][$field_name]['field_column'];
+					foreach ($group['fields'] as $field) {
 						foreach ($in_list as $value) {
-							$field_list[] = " instr(concat({$delimiter},`{$field_column}`,{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
+							$field_list[] = " instr(concat({$delimiter},{$field->column_name},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
 						}
 					}
 					if (count($group['category_group'])>0)
@@ -911,9 +954,8 @@ class Reefine {
 					$field_list = array();
 					foreach ($in_list as $value) {
 						$value_list = array();
-						foreach ($group['fields'] as $field_name) {
-							$field_column = $this->_custom_fields[$this->site][$field_name]['field_column'];
-							$value_list[] = " instr(concat({$delimiter},`{$field_column}`,{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
+						foreach ($group['fields'] as $field) {
+							$value_list[] = " instr(concat({$delimiter},{$field->column_name},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
 						}
 
 						if (count($group['category_group'])>0)
@@ -935,9 +977,8 @@ class Reefine {
 					// ( `field_id_15` IN ('Bosch','Green')
 					// OR  `field_id_12` IN ('Bosch','Green'))
 					$field_list = array();
-					foreach ($group['fields'] as $field_name) {
-						$field_column = $this->_custom_fields[$this->site][$field_name]['field_column'];
-						$field_list[] = " `{$field_column}` IN (" . implode(',',$in_list) . ")";
+					foreach ($group['fields'] as $field) {
+						$field_list[] = " {$field->column_name} IN (" . implode(',',$in_list) . ")";
 					}
 					if (count($group['category_group'])>0)
 						$field_list[] = " ( cat_{$group_name}.cat_url_title IN (" . implode(',',$in_list) . ") AND cat_{$group_name}.group_id IN {$group['cat_group_in_list']})";
@@ -953,9 +994,8 @@ class Reefine {
 					$field_list = array();
 					foreach ($in_list as $value) {
 						$value_list = array();
-						foreach ($group['fields'] as $field_name) {
-							$field_column = $this->_custom_fields[$this->site][$field_name]['field_column'];
-							$value_list[] = " `{$field_column}` = {$value}";
+						foreach ($group['fields'] as $field) {
+							$value_list[] = " {$field->column_name} = {$value}";
 						}
 						if (count($group['category_group'])>0)
 							$value_list[] = "{$this->dbprefix}channel_data.entry_id IN (SELECT exp_category_posts.entry_id " .
@@ -1549,9 +1589,120 @@ class Reefine {
 		}
 		return false;
 	}
+	
+	/**
+	 * 
+	 * @param unknown $field_name
+	 * @throws Exception
+	 * @return Reefine_field
+	 */
+	function get_field_obj($field_name) {
+		
+		// if field name conmtains a colon
+		if (strpos($field_name,':')!==false) {
+			list($ee_field_name,$child_field) = explode(':', $field_name);
+			$field_type = $this->_custom_fields[$this->site][$ee_field_name]['field_type'];
+			$field_class = 'Reefine_field_' . $field_type;
+			if (class_exists($field_class)) {
+				return new $field_class($this,$field_name, $ee_field_name,$child_field);
+			} else {
+				throw new Exception('Reefine error: Fieldtype ' . $field_type . ' not supported.');
+			}
+		} else {
+			return new Reefine_field($this, $field_name);
+		}
+	}
+}
 
+/**
+ * Generic field class used to gather informaiton about the field in the database.
+ * @author Patrick
+ *
+ */
+class Reefine_field {
+	/**
+	 * Field name as it appears int he reefine tag eg colour, store:price
+	 * @var unknown
+	 */
+	var $field_name;
+	/**
+	 * Column name to be used in SQL for value field, used in URL. eg field_id_27
+	 * @var unknown
+	 */
+	var $column_name;
+	/**
+	 * Column name in field for title field that is displayed to user
+	 * @var unknown
+	 */
+	var $title_column_name;
+	/**
+	 * Additional sql to be added to join
+	 * @var unknown
+	 */
+	var $join_sql = '';
+	/**
+	 * Name of field in channel entry eg store:price would be store
+	 * @var unknown
+	 */
+	var $ee_field_name = '';
+	var $field_label = '';
+	var $ee_type = '';
+	/**
+	 * Reefine object
+	 * @var Reefine
+	 */
+	public $reefine;
+	function __construct($reefine, $field_name) {
+		$this->reefine = $reefine;
+		$this->field_name = $field_name;
+		$this->column_name = $reefine->_custom_fields[$reefine->site][$field_name]['field_column'];
+		$this->title_column_name = $this->column_name;
+		$this->assign_field_info($field_name);
 
+		//$label = $this->_custom_fields[$this->site][$field]['field_label'];
+		//$ee_type = $this->_custom_fields[$this->site][$field]['field_type'];
+	}
+	
+	function assign_field_info($ee_field_name) {
+		if (isset($this->reefine->_custom_fields[$this->reefine->site][$ee_field_name])) {
+			$ee_field = $this->reefine->_custom_fields[$this->reefine->site][$ee_field_name];
+			$this->ee_field_name = $ee_field_name;
+			$this->field_label = $ee_field['field_label'];
+			$this->ee_type= $ee_field['field_type'];
+		}
+	}
+}
 
-
-
+/**
+ * Field for the expresso Store custom fieldtpye
+ * @author Patrick
+ *
+ */
+class Reefine_field_store extends Reefine_field {
+	/**
+	 * column in expresso products table eg price
+	 * @var string
+	 */
+	var $child_column;
+	/**
+	 * table alias used in sql statement
+	 * @var string
+	 */
+	var $table_alias; 
+	function __construct($reefine,$field_name,$ee_field_name,$child_column) {
+		$dbprefix = $reefine->dbprefix;
+		$this->reefine = $reefine;
+		$this->assign_field_info($ee_field_name);
+		$this->field_name = $field_name;
+		$this->child_column=$child_column;
+		$table_alias = 'store_products_' . preg_replace('/[^A-Z0-9]/i','_',$ee_field_name);
+		$this->column_name = "{$table_alias}.{$child_column}";
+		$this->title_column_name = $this->column_name;  
+		$this->join_sql = "LEFT OUTER JOIN {$dbprefix}store_products {$table_alias} " .
+			"ON {$table_alias}.entry_id = {$dbprefix}channel_data.entry_id ";
+		
+	}
+	
+	
+	
 }
