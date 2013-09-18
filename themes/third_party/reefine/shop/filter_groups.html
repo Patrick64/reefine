@@ -1,80 +1,59 @@
+<div role="search">
 <div class="reefine_search">
-	{filter_groups}
-		
-		{if type=='search'}
+	{search_groups}
 		{filters}
-		<form method="post">
-			<label for="{group_name}">Search</label>
+		<form method="post" class="{filter_active_class}">
+			<label for="{group_name}">{label}</label>
 		  <input
 				type="text" id="{group_name}" name="{group_name}" placeholder="search"
-				value="{filter_value}" />
+				value="{filter_title}" title="Search ({filter_quantity})" />
 		  <input type="submit" name="submit" value="Go" />
 		</form>
-		<!--{filter_title}{url}{filter_value}{filter_active}{filter_quantity}{filter_min_value}{filter_max_value}{filter_min}{filter_max}-->
+		<!--  {url}{filter_active_boolean} -->
 		{/filters}
-		{/if}
-	{/filter_groups}
+	{/search_groups}
 </div>
 <div class="reefine_sidebar">
 	{if total_active_filters > 0}
 	<div class="reefine_active_filters">	
 		<h3>Selected Criteria</h3>
 		<ul>
-		{filter_groups}
-			{if active_filters>0}
-				{if type=='list'}
-					{filters}
-						{if filter_active}
-
-						<li class="active">
-						<a href="{url}">{filter_title} ({filter_quantity})</a>
-						</li>
-						{/if}
-					{/filters}
-				{if:else}
-					<li class="active">
-					<a class="remove-filter" href="{clear_url}">
-					{filters}
-					<!--{url}{filter_title}{filter_value}{filter_active}{filter_quantity}{filter_min_value}{filter_max_value}{filter_min}{filter_max}-->
-					{if filter_active}{if active_index>0}, {/if}{filter_value}{/if}{/filters}
-					</a>
-					</li>
-				{/if}
-			{/if}
-		{/filter_groups}
+		{active_groups}
+			<li><strong><a class="remove-filter" href="{clear_url}">{label}:</a></strong></li>
+			{filters}
+				<li class="{filter_active_class}"  aria-selected="{filter_active_boolean}">
+				<a href="{url}">{filter_title} ({filter_quantity})</a>
+				</li>
+				<!-- {filter_min_value}{filter_max_value} -->
+			{/filters}
+		{/active_groups}
 		</ul>
-		<p class="total_entries">{total_entries} products available</p>
+		<p class="total_entries">{total_entries} items found</p>
 	</div>
 	{/if}
 	<div class="reefine_filters">
-		{filter_groups}
-			
-			{if type=='search'}
-			{if:elseif type=='number_range'}
-			<h3 class="{filter_url_title}">{label}</h3>			
-			<form method="post" class="number_range">
+		{number_range_groups}
+			<h3 class="group_{group_name}">{label}</h3>			
+			<form method="post" class="number_range" >
 				{filters} 
-				<input type="text" name="{group_name}_min" placeholder="{filter_min}"
-					value="{filter_min_value}"/>
-					&mdash; <input type="text" name="{group_name}_max" placeholder="{filter_max}"
-					value="{filter_max_value}"/>
+				<input type="text" name="{group_name}_min" id="{group_name}_min" placeholder="{filter_min}"
+					value="{filter_min_value}" aria-label="Minimum value"/>
+					&mdash; <input type="text" name="{group_name}_max" id="{group_name}_max" placeholder="{filter_max}"
+					value="{filter_max_value}" aria-label="Maximum value"/>
 				{/filters} 
 				<input type="submit" name="submit" value="Go" />
 			</form>
-			{if:elseif total_filters > 0 }
-				<h3 class="">{label}</h3>
+		{/number_range_groups}
+		{list_groups}
+				<h3 class="group_{group_name}">{label}</h3>
 				<ul>
 				{filters}
-					{if filter_quantity > 0}
-					<li class="{if filter_active}active{if:else}inactive{/if}">
+					<li class="{filter_active_class}" aria-selected="{filter_active_boolean}">
 					<a href="{url}">{filter_title} ({filter_quantity})</a>
 					</li>
-					{/if}
 				{/filters}
 				</ul>
-			{if:else}
-				<p>n/a</p>
-			{/if}
-		{/filter_groups}
+		{/list_groups}
 	</div>
+</div>
 </div>

@@ -118,24 +118,8 @@ class Reefine {
 		// Make a local reference to the ExpressionEngine super object
 		$this->EE =& get_instance();
 		$this->EE->load->library('logger');
-		if(!isset($_SESSION))
-		{
-			session_start();
-		}
 		$this->timestamp = ($this->EE->TMPL->cache_timestamp != '') ? $this->EE->TMPL->cache_timestamp : $this->EE->localize->now;
-
-		//if (! isset($this->EE->session->cache[$this->class_name]))
-		//$this->EE->session->cache[$this->class_name] = array();
-
-		//$this->cache =& $this->EE->session->cache[$this->class_name];
-
-		if (! isset($_SESSION['reefine']))
-			$_SESSION['reefine'] = array();
-		//$this->cache =& $_SESSION['reefine'];
-		$this->cache = array();
-		//$this->EE->session->cache[$this->class_name] = array();
-
-		//$this->cache =& $this->EE->session->cache[$this->class_name];
+		
 
 		try {
 			// if a second tag part is specified then stop processing
@@ -223,41 +207,24 @@ class Reefine {
 				$this->change_uri_for_paging();
 			}
 
+			// get the list of possible values to be used
+			$this->set_filter_groups();
 
-
-
-			// http://expressionengine.com/user_guide/development/usage/session.html
-			// is this search already in cache?
-			if (isset($this->cache[$this->filter_id]) && isset($this->cache[$this->filter_id]['return_data'])) {
-				//die('yay cache');
-				$cached = $this->cache[$this->filter_id];
-				//$this->filter_groups = 	$cached['filter_groups'];
-				//$this->entry_id_list = 	$cached['entry_id_list'];
-				$this->return_data = $cached['return_data'];
-			} else {
-					
-				// get the list of possible values to be used
-				$this->set_filter_groups();
-
-				// get all possible urls for each filters and put in $this->filter_groups[]['filters']['url']
-				if ($this->method=='url') {
-					$this->add_filter_url_to_filters();
-				}
-				// get all entry ids for this search.
-				$this->entry_id_list = $this->get_entry_ids_from_database();
-				$this->theme->before_parse_tag_data();
-				$this->return_data = $this->get_tag_data_result($this->entry_id_list );
-				// store in cache
-				$cached = array(
-						'return_data' => $this->return_data
-				);
-				$this->cache[$this->filter_id] = $cached;
+			// get all possible urls for each filters and put in $this->filter_groups[]['filters']['url']
+			if ($this->method=='url') {
+				$this->add_filter_url_to_filters();
 			}
+			// get all entry ids for this search.
+			$this->entry_id_list = $this->get_entry_ids_from_database();
+			$this->theme->before_parse_tag_data();
+			$this->return_data = $this->get_tag_data_result($this->entry_id_list );
 
 		} catch (Exception $e) {
 			// Log error
+			$this->EE->db->dbprefix = $this->dbprefix;
 			$this->EE->logger->log_action($this->class_name . ' error at ' . $_SERVER['REQUEST_URI'] . ': ' . $e->getMessage());
 			$this->return_data = '';
+			throw $e;
 		}
 
 		// set db prefix back
@@ -347,7 +314,7 @@ class Reefine {
 			if (preg_match('/filter\:(.+)\:.+/',$key,$matches)) {
 				$group_name = $matches[1];
 				if (!isset($this->filter_groups[$group_name]))
-					$this->filter_groups[$group_name] = array('group_name'=>$group_name);
+					$this->filter_groups[$group_name] = array('group_name'=>$group_name,'values'=>array());
 			}
 		}
 
@@ -480,7 +447,8 @@ class Reefine {
 						'label' => isset($default['label']) ? $default['label'] : $field->field_label,
 						'type'=>$default['type'],
 						'join'=>$default['join'],
-						'delimiter'=>$default['delimiter']
+						'delimiter'=>$default['delimiter'],
+						'values'=>array()
 				);
 			
 
@@ -543,6 +511,7 @@ class Reefine {
 					if (count($results)==0)
 						$filters[] = array(
 								'filter_value'=>'',
+								'filter_title'=>'',
 								'filter_min'=>'',
 								'filter_max'=>'',
 								'filter_quantity'=>0,
@@ -556,7 +525,7 @@ class Reefine {
 							$results[0]['filter_value']='< ' . $group['values']['max'];
 						else
 							$results[0]['filter_value']='';
-							
+						$results[0]['filter_title']=$results[0]['filter_value'];
 						//$results[0]['filter_value']=$results[0]['filter_min'].'-'.$results[0]['filter_max'];
 
 						$results[0]['group_name']=$group_key;
@@ -816,7 +785,7 @@ class Reefine {
 		//// make where statement based on filter fields
 		foreach ($this->filter_groups as $key => $group) {
 			// If the field has some selected values and it's not one to ignore..
-			if ($ignore_filter_group!=$key && isset($group['values']) && count($group['values']>0)) {
+			if ($ignore_filter_group!=$key && isset($group['values']) && count($group['values'])>0) {
 				if ($group['type']=='number_range')
 					$clauses = array_merge($clauses,$this->get_where_clause_for_number_range($key, $group));
 				else if ($group['type']=='search')
@@ -931,7 +900,7 @@ class Reefine {
 		$group_name = $group['group_name'];
 
 		// channel fields
-		if (isset($group['fields'])) {
+		if (isset($group['fields']) && count($group['fields'])>0) {
 			$field_list = array();
 			// a filter group can have many fields so go through each
 			$in_list = array();
@@ -1247,9 +1216,12 @@ class Reefine {
 	// must have values in filter_groups[]['values'] set
 	private function add_filter_url_to_filters() {
 		foreach ($this->filter_groups as $group_name => &$group) {
-			if ($group['type']=='list') {
-				foreach ($group['filters'] as &$filter) {
+			
+			foreach ($group['filters'] as &$filter) {
+				if ($group['type']=='list') {
 					$filter['url'] = $this->EE->functions->create_url($this->get_filter_url($group_name,$filter['filter_value']));
+				} else { // give url that will remove filter
+					$filter['url'] = $this->EE->functions->create_url($this->get_filter_url($group_name));
 				}
 			}
 			$group['clear_url'] = $this->EE->functions->create_url($this->get_filter_url($group_name,null));
@@ -1355,7 +1327,7 @@ class Reefine {
 		foreach ($filter_values as $group_name => $values) {
 			if (isset($this->filter_groups[$group_name])) {
 				$group = &$this->filter_groups[$group_name];
-				if (isset($group['values'])) {
+				if (isset($group['values']) && count($group['values'])>0) {
 					array_merge($group['values'], $values);
 				} else {
 					$group['values'] = $values;
@@ -1367,6 +1339,10 @@ class Reefine {
 		}
 	}
 
+	function tagdataHasTag($tag) {
+		return (strpos($this->tagdata, '{'.$tag.'}')!==false);	
+	}
+	
 	// create tag data
 	private function get_tag_data_result($results) {
 		$delimiter = '|';
@@ -1375,6 +1351,11 @@ class Reefine {
 		$tag['breadcrumb'] = array();
 		$tag['total_active_filters'] = $this->active_filter_count;
 		$tag['total_entries'] = count($results);
+		$tag['active_groups'] = array();
+		$tag['search_groups'] = array();
+		$tag['list_groups'] = array();
+		$tag['number_range_groups'] = array();
+		
 		$entry_ids = '';
 
 		if (count($results)==0) {
@@ -1398,6 +1379,11 @@ class Reefine {
 				if ($filter['filter_active']) {
 					$filter['active_index'] = $active_index;
 					$active_index += 1;
+					$filter['filter_active_class'] = 'active';
+					$filter['filter_active_boolean'] = 'true';
+				} else {
+					$filter['filter_active_class'] = 'inactive';
+					$filter['filter_active_boolean'] = 'false';
 				}
 
 				if ($group['type']=='number_range') {
@@ -1407,18 +1393,45 @@ class Reefine {
 			}
 
 		}
+		
+		unset($filter);
 
 		// html encode all filter data such as values
 		$this->html_encode_filters();
 
 		// now to do the filters. must be converted from associative array to normal array
 		// EE has bugs when a tag pair is used more than once so make a copy for the breadcrumb
-		foreach ($this->filter_groups as $group_name => &$group) {
-			$tag['filter_groups'][] = $group;
-			if ($this->seperate_filters)
-				$tag[$group_name] = array($this->arrayCopy($group));
-			//$tag['breadcrumb'][] = $this->arrayCopy($group);
+		if ($this->tagdataHasTag('filter_groups')) {
+			foreach ($this->filter_groups as $group_name => &$group) {
+				$tag['filter_groups'][] = $group;
+			}
 		}
+
+		foreach ($this->filter_groups as $group_name => &$group) {
+			// go through each filter group to see if a seperate filter is specified			
+			if ($this->tagdataHasTag($group_name)) 
+				$tag[$group_name] = array($this->arrayCopy($group));
+			// make the type group tag tag if it is specified (eg number_range_groups)
+			$type_group_name = $group['type'] . '_groups';
+			if ($this->tagdataHasTag($type_group_name)) {
+				// initialise array
+				if (!isset($tag[$type_group_name]))
+					$tag[$type_group_name] = array();
+				$tag[$type_group_name][] = $this->arrayCopy($group);
+			}
+			// make the {active_filters} tag
+			if ($this->tagdataHasTag('active_groups') && count($group['values'])>0 && $group['type']!='search') {
+				$active_group = $this->arrayCopy($group);
+				$active_group['filters'] = array(); // remove filters
+				foreach ($group['filters'] as $filter) {
+					if ($filter['filter_active']) // filter is active
+						$active_group['filters'][] = $this->arrayCopy($filter);
+				}
+				$tag['active_groups'][] = $active_group;
+			}
+		}
+		
+		
 
 
 		// put into an array of one element (so it displays once)
