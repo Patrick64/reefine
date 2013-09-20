@@ -371,6 +371,8 @@ class Reefine {
 			$this->add_filter_group_setting($group_name, 'join', 'or', 'text');
 			$this->add_filter_group_setting($group_name, 'orderby', 'value', 'text');
 			$this->add_filter_group_setting($group_name, 'category_group', array(), 'array');
+			$this->add_filter_group_setting($group_name, 'show_empty_filters', false, 'bool');
+			
 			if (count($group['category_group'])>0) {
 				$group['cat_group_in_list'] = $this->array_to_in_list($group['category_group']);
 			}
@@ -1413,12 +1415,29 @@ class Reefine {
 				$tag[$group_name] = array($this->arrayCopy($group));
 			// make the type group tag tag if it is specified (eg number_range_groups)
 			$type_group_name = $group['type'] . '_groups';
+			
 			if ($this->tagdataHasTag($type_group_name)) {
-				// initialise array
-				if (!isset($tag[$type_group_name]))
-					$tag[$type_group_name] = array();
-				$tag[$type_group_name][] = $this->arrayCopy($group);
+				if ($group['type']=='list') {
+					// show_empty_filters will output all filters even if they have 0 entries
+					if (isset($group['show_empty_filters']) && $group['show_empty_filters']) {
+						$tag[$type_group_name][] = $this->arrayCopy($group);
+					} else {
+						// only output filters that have more than 0 entries or are currently active.
+						$list_group_tag = $this->arrayCopy($group,'filters'); // copy group except for filters
+						foreach ($group['filters'] as $filter) {
+							if ($filter['filter_active'] || $filter['filter_quantity']>0) // filter is active or has filters
+								$list_group_tag['filters'][] = $this->arrayCopy($filter);
+						}
+						$tag[$type_group_name][] = $list_group_tag;
+					}
+				} else {
+					// initialise array
+					if (!isset($tag[$type_group_name]))
+						$tag[$type_group_name] = array();
+					$tag[$type_group_name][] = $this->arrayCopy($group);
+				}
 			}
+			
 			// make the {active_filters} tag
 			if ($this->tagdataHasTag('active_groups') && count($group['values'])>0 && $group['type']!='search') {
 				$active_group = $this->arrayCopy($group);
@@ -1588,11 +1607,13 @@ class Reefine {
 	}
 
 	// 	http://stackoverflow.com/a/10462308/1102000
-	private function arrayCopy( array $array ) {
+	private function arrayCopy( array $array, $except_key = null ) {
 		$result = array();
 		foreach( $array as $key => $val ) {
-			if( is_array( $val ) ) {
-				$result[$key] = $this->arrayCopy( $val );
+			if ( $key===$except_key ) {
+				// dont copy any entries that match $except_key
+			} elseif( is_array( $val ) ) {
+				$result[$key] = $this->arrayCopy( $val, $except_key );
 			} elseif ( is_object( $val ) ) {
 				$result[$key] = clone $val;
 			} else {
