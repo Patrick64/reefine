@@ -3,6 +3,7 @@
 	{search_groups}
 		{filters}
 		<form method="post" class="{filter_active_class}">
+			<input type="hidden" name="XID" value="{XID_HASH}" /> 
 			<label for="{group_name}">{label}</label>
 		  <input
 				type="text" id="{group_name}" name="{group_name}" placeholder="search"
@@ -35,6 +36,7 @@
 		{number_range_groups}
 			<h3 class="group_{group_name}">{label}</h3>			
 			<form method="post" class="number_range" >
+			<input type="hidden" name="XID" value="{XID_HASH}" /> 
 				{filters} 
 				<input type="text" name="{group_name}_min" id="{group_name}_min" placeholder="{filter_min}"
 					value="{filter_min_value}" aria-label="Minimum value"/>
