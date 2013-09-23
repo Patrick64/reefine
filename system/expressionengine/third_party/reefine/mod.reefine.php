@@ -1450,20 +1450,12 @@ class Reefine {
 			}
 		}
 		
-		
-
-
-		// put into an array of one element (so it displays once)
-		$tag = array($tag);
-
-
-		// parse tag data ith template
-		//return $this->parse_variables_fix($this->EE->TMPL->tagdata, $tag);
-
-		return $this->EE->TMPL->parse_variables($this->tagdata, $tag);
-
+		// parse it
+			return $this->EE->TMPL->parse_variables_row($this->tagdata, $tag);
 
 	}
+	
+	
 
 	// get array of channel ids from | seperate list of channel names
 	private function get_channel_ids($channel_names) {
