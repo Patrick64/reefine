@@ -181,7 +181,7 @@ class Reefine {
 
 					if ($value !== false) {
 						$url = $this->get_filter_url($group_name,$value);
-						$this->EE->functions->redirect($this->EE->functions->create_url($url));
+						$this->EE->functions->redirect($this->create_url($url));
 						return;
 					}
 					if ($group['type']=='number_range') {
@@ -195,7 +195,7 @@ class Reefine {
 							if ($value_max !== false && $value_max != '')
 								$value_range['max']=$value_max;
 							$url = $this->get_filter_url($group_name,$value_range);
-							$this->EE->functions->redirect($this->EE->functions->create_url($url));
+							$this->EE->functions->redirect($this->create_url($url));
 							return;
 						}
 					}
@@ -266,7 +266,7 @@ class Reefine {
 			$url = $unfiltered_url;
 		else
 			$url = $this->url;
-
+		
 		$this->EE->uri->uri_string = $url . $this->url_suffix;
 		$this->EE->uri->segments = explode('/',trim($url,'/'));
 		// add suffix to query string which is used for paging
@@ -1221,12 +1221,12 @@ class Reefine {
 			
 			foreach ($group['filters'] as &$filter) {
 				if ($group['type']=='list') {
-					$filter['url'] = $this->EE->functions->create_url($this->get_filter_url($group_name,$filter['filter_value']));
+					$filter['url'] = $this->create_url($this->get_filter_url($group_name,$filter['filter_value']));
 				} else { // give url that will remove filter
-					$filter['url'] = $this->EE->functions->create_url($this->get_filter_url($group_name));
+					$filter['url'] = $this->create_url($this->get_filter_url($group_name));
 				}
 			}
-			$group['clear_url'] = $this->EE->functions->create_url($this->get_filter_url($group_name,null));
+			$group['clear_url'] = $this->create_url($this->get_filter_url($group_name,null));
 		}
 	}
 
@@ -1293,7 +1293,7 @@ class Reefine {
 		if (strpos($result,'/')!==0 && strpos($result,'http://')!==0 && strpos($result,'https://')!==0) {
 			$result = '/' . $result;
 		}
-		//$result=$this->EE->functions->create_url($result);
+	
 		return $result;
 	}
 	
@@ -1301,6 +1301,15 @@ class Reefine {
 		// double encode URL
 		return str_replace('%', '%40', urlencode($value)); 
 	}
+	
+	private function create_url($url)
+	{
+		$url = $this->EE->functions->create_url($url);
+		// double encode URL
+		$url = preg_replace("#(^|[^:])//+#", "\\1/", $url);
+		return $url;
+	}
+	
 	
 	/**
 	 * Double encode all values in an array using urlencode
