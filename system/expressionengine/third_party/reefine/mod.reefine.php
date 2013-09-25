@@ -436,7 +436,7 @@ class Reefine {
 			{
 				$field = $this->get_field_obj($field_name);
 				
-				if ($field == 'title')
+				if ($field_name == 'title')
 					$default = $this->default_group_by_type['title'];
 				else if (isset($this->default_group_by_type[$field->ee_type]))
 					$default = $this->default_group_by_type[$field->ee_type];
@@ -1448,7 +1448,7 @@ class Reefine {
 			}
 			
 			// make the {active_filters} tag
-			if ($this->tagdataHasTag('active_groups') && count($group['values'])>0 && $group['type']!='search') {
+			if ($this->tagdataHasTag('active_groups') && count($group['values'])>0) {
 				$active_group = $this->arrayCopy($group);
 				$active_group['filters'] = array(); // remove filters
 				foreach ($group['filters'] as $filter) {

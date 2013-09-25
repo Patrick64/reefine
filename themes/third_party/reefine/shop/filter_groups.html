@@ -15,7 +15,7 @@
 	{/search_groups}
 </div>
 <div class="reefine_sidebar">
-	
+	{if total_active_filters > 0}
 	<div class="reefine_active_filters">	
 		<h3>Selected Criteria</h3>
 		<ul>
@@ -23,16 +23,26 @@
 			<li><strong><a class="remove-filter" href="{clear_url}">{label}:</a></strong></li>
 			{filters}
 				<li class="{filter_active_class}"  aria-selected="{filter_active_boolean}">
-				<a href="{url}">{filter_title} ({filter_quantity})</a>
+				<a href="{url}">{filter_title}</a>
 				</li>
-				<!-- {filter_min_value}{filter_max_value} -->
+				<!-- {filter_min_value}{filter_max_value}{filter_quantity} -->
 			{/filters}
 		{/active_groups}
 		</ul>
 		<p class="total_entries">{total_entries} items found</p>
 	</div>
-	
+	{/if}
 	<div class="reefine_filters">
+		{list_groups}
+				<h3 class="group_{group_name}">{label}</h3>
+				<ul>
+				{filters}
+					<li class="{filter_active_class}" aria-selected="{filter_active_boolean}">
+					<a href="{url}">{filter_title} ({filter_quantity})</a>
+					</li>
+				{/filters}
+				</ul>
+		{/list_groups}
 		{number_range_groups}
 			<h3 class="group_{group_name}">{label}</h3>			
 			<form method="post" class="number_range" >
@@ -46,16 +56,6 @@
 				<input type="submit" name="submit" value="Go" />
 			</form>
 		{/number_range_groups}
-		{list_groups}
-				<h3 class="group_{group_name}">{label}</h3>
-				<ul>
-				{filters}
-					<li class="{filter_active_class}" aria-selected="{filter_active_boolean}">
-					<a href="{url}">{filter_title} ({filter_quantity})</a>
-					</li>
-				{/filters}
-				</ul>
-		{/list_groups}
 	</div>
 </div>
 </div>
