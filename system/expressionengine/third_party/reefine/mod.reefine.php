@@ -1639,7 +1639,6 @@ class Reefine {
 	 * @return Reefine_field
 	 */
 	function get_field_obj($field_name) {
-		
 		// if field name conmtains a colon
 		if (strpos($field_name,':')!==false) {
 			list($ee_field_name,$child_field) = explode(':', $field_name);
@@ -1650,6 +1649,9 @@ class Reefine {
 			} else {
 				throw new Exception('Reefine error: Fieldtype ' . $field_type . ' not supported.');
 			}
+		} else if (isset($this->EE->publisher_model)) {
+			// Publisher module detected so check the publisher fields instead
+			return new Reefine_field_publisher($this,$field_name, $field_name);
 		} else {
 			return new Reefine_field($this, $field_name);
 		}
@@ -1694,6 +1696,12 @@ class Reefine_field {
 	 * @var Reefine
 	 */
 	public $reefine;
+	/**
+	 * Database column name (eg field_id_2)
+	 * @var unknown
+	 */
+	var $db_column;
+	
 	function __construct($reefine, $field_name) {
 		$this->reefine = $reefine;
 		$this->field_name = $field_name;
@@ -1711,6 +1719,7 @@ class Reefine_field {
 			$this->ee_field_name = $ee_field_name;
 			$this->field_label = $ee_field['field_label'];
 			$this->ee_type= $ee_field['field_type'];
+			$this->db_column = $ee_field['field_column'];
 		}
 	}
 }
@@ -1747,4 +1756,27 @@ class Reefine_field_store extends Reefine_field {
 	
 	
 	
+}
+
+/**
+ * Field class for dealing with entries with the Publisher Module
+ * @author Patrick
+ *
+ */
+class Reefine_field_publisher extends Reefine_field {
+	
+	function __construct($reefine,$field_name,$ee_field_name) {
+		$dbprefix = $reefine->dbprefix;
+		$this->reefine = $reefine;
+		$this->assign_field_info($ee_field_name);
+		$this->field_name = $ee_field_name;
+		$this->column_name = "{$dbprefix}publisher_data.{$this->db_column}";
+		$this->title_column_name = $this->column_name;
+		$session_language_id = intval(ee()->publisher_model->current_language['id']);
+		$this->join_sql = "LEFT OUTER JOIN {$dbprefix}publisher_data " .
+		"ON {$dbprefix}publisher_data.entry_id = {$dbprefix}channel_data.entry_id " .
+		"AND {$dbprefix}publisher_data.publisher_status IN ('', " . $this->reefine->db->escape($this->reefine->status) . ") " .
+		"AND {$dbprefix}publisher_data.publisher_lang_id = {$session_language_id} ";
+	
+	}
 }
