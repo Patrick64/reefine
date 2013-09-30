@@ -902,7 +902,7 @@ class Reefine {
 		$group_name = $group['group_name'];
 
 		// channel fields
-		if (isset($group['fields']) && count($group['fields'])>0) {
+		
 			$field_list = array();
 			// a filter group can have many fields so go through each
 			$in_list = array();
@@ -986,7 +986,7 @@ class Reefine {
 					$clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
 				}
 			}
-		}
+		
 		return $clauses;
 	}
 
