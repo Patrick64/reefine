@@ -470,7 +470,7 @@ class Reefine {
 				// for each field in the filter group
 				foreach ($group['fields'] as &$field) {
 					// get list of possible values
-					$results = $this->get_filter_groups_for_list($group_key,$group,$field->column_name,$field->title_column_name);
+					$results = $this->get_filter_groups_for_list($group_key,$group,$field->get_value_column(),$field->get_title_column());
 					$filters = array_merge($filters,$results);
 				}
 				if (count($group['category_group'])>0) {
@@ -495,13 +495,13 @@ class Reefine {
 				foreach ($group['fields'] as &$field) {
 							
 					$sql = "SELECT count(distinct({$this->dbprefix}channel_data.entry_id)) as filter_quantity, " .
-							"min(CAST({$field->column_name} AS DECIMAL(16,2))) as filter_min, " .
-							"max(CAST({$field->column_name} AS DECIMAL(16,2))) as filter_max " .
+							"min(CAST({$field->get_value_column()} AS DECIMAL(16,2))) as filter_min, " .
+							"max(CAST({$field->get_value_column()} AS DECIMAL(16,2))) as filter_max " .
 							"FROM {$this->dbprefix}channel_data ";
 					//if ($this->include_channel_titles)
 					$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
 					$sql .= $this->get_query_join_sql($group_key);
-					$sql .= "WHERE {$field->column_name} <> '' ";
+					$sql .= "WHERE {$field->get_value_column()} <> '' ";
 					if (isset($this->channel_ids)) {
 						$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->channel_ids) . ")";
 					}
@@ -724,13 +724,7 @@ class Reefine {
 	private function get_query_join_sql($include_group) {
 		$joins = array();
 		foreach($this->filter_groups as $index => $group) {
-			if (count($group['category_group']) > 0) {
-				$cat_group_in_list = $group['cat_group_in_list'];
-				$joins[] = "LEFT OUTER JOIN {$this->dbprefix}category_posts catp_{$index} " .
-				"ON catp_{$index}.entry_id = {$this->dbprefix}channel_data.entry_id \n" .
-				"LEFT OUTER JOIN {$this->dbprefix}categories cat_{$index} " .
-				"ON cat_{$index}.cat_id = catp_{$index}.cat_id AND cat_{$index}.group_id IN {$cat_group_in_list} \n" ;
-			}
+			
 		}
 		// also left outer join categories
 		if ($this->include_categories)
@@ -742,12 +736,20 @@ class Reefine {
 		// add joins for custom fields.
 		foreach ($this->filter_groups as $key => &$group) {
 			// If group has values
-			if ($key==$include_group || (isset($group['values']) && count($group['values']>0))) {
+			if ($key==$include_group || (isset($group['values']) && count($group['values'])>0)) {
 				foreach ($group['fields'] as $field) {
-					if ($field->join_sql!='')
-						$joins[] = $field->join_sql;
+					if ($field->get_join_sql()!='')
+						$joins[] = $field->get_join_sql();
+				}
+				if (count($group['category_group']) > 0) {
+					$cat_group_in_list = $group['cat_group_in_list'];
+					$joins[] = "LEFT OUTER JOIN {$this->dbprefix}category_posts catp_{$key} " .
+					"ON catp_{$key}.entry_id = {$this->dbprefix}channel_data.entry_id \n" .
+					"LEFT OUTER JOIN {$this->dbprefix}categories cat_{$key} " .
+					"ON cat_{$key}.cat_id = catp_{$key}.cat_id AND cat_{$key}.group_id IN {$cat_group_in_list} \n" ;
 				}	
 			}
+			
 		}
 		// remove duplicates
 		$joins = array_map("unserialize", array_unique(array_map("serialize", $joins)));		
@@ -797,15 +799,15 @@ class Reefine {
 			}
 		}
 		// ensure status is open or whatever is supplied
-		$clauses[] = "(status = '' OR status = " . $this->db->escape($this->status) . ")";
+		$clauses[] = "({$this->dbprefix}channel_titles.status = '' OR {$this->dbprefix}channel_titles.status = " . $this->db->escape($this->status) . ")";
 		// limit to current site
 		$clauses[] = "{$this->dbprefix}channel_titles.site_id = " . intval($this->site);
 		// hide expired entries if neccesary
 		//if ($this->EE->TMPL->fetch_param('show_expired') != 'yes')
-		$clauses[] =  "(expiration_date = 0 OR expiration_date > {$this->timestamp}) ";
+		$clauses[] =  "({$this->dbprefix}channel_titles.expiration_date = 0 OR {$this->dbprefix}channel_titles.expiration_date > {$this->timestamp}) ";
 		// hide future entries if neccesary
 		//if ($this->EE->TMPL->fetch_param('show_future_entries') != 'yes')
-		$clauses[] = "entry_date < ".$this->timestamp;
+		$clauses[] = "{$this->dbprefix}channel_titles.entry_date < ".$this->timestamp;
 
 		// add search fields if neccesary
 		if ($this->search_field_where_clause != '')
@@ -921,7 +923,7 @@ class Reefine {
 					$field_list = array();
 					foreach ($group['fields'] as $field) {
 						foreach ($in_list as $value) {
-							$field_list[] = " instr(concat({$delimiter},{$field->column_name},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
+							$field_list[] = " instr(concat({$delimiter},{$field->get_value_column()},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
 						}
 					}
 					if (count($group['category_group'])>0)
@@ -933,7 +935,7 @@ class Reefine {
 					foreach ($in_list as $value) {
 						$value_list = array();
 						foreach ($group['fields'] as $field) {
-							$value_list[] = " instr(concat({$delimiter},{$field->column_name},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
+							$value_list[] = " instr(concat({$delimiter},{$field->get_value_column()},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
 						}
 
 						if (count($group['category_group'])>0)
@@ -956,7 +958,7 @@ class Reefine {
 					// OR  `field_id_12` IN ('Bosch','Green'))
 					$field_list = array();
 					foreach ($group['fields'] as $field) {
-						$field_list[] = " {$field->column_name} IN (" . implode(',',$in_list) . ")";
+						$field_list[] = " {$field->get_value_column()} IN (" . implode(',',$in_list) . ")";
 					}
 					if (count($group['category_group'])>0)
 						$field_list[] = " ( cat_{$group_name}.cat_url_title IN (" . implode(',',$in_list) . ") AND cat_{$group_name}.group_id IN {$group['cat_group_in_list']})";
@@ -1668,49 +1670,67 @@ class Reefine_field {
 	 * Field name as it appears int he reefine tag eg colour, store:price
 	 * @var unknown
 	 */
-	var $field_name;
+	protected $field_name;
 	/**
 	 * Column name to be used in SQL for value field, used in URL. eg field_id_27
 	 * @var unknown
 	 */
-	var $column_name;
+	protected $column_name;
 	/**
 	 * Column name in field for title field that is displayed to user
 	 * @var unknown
 	 */
-	var $title_column_name;
+	protected $title_column_name;
 	/**
 	 * Additional sql to be added to join
 	 * @var unknown
 	 */
-	var $join_sql = '';
+	protected $join_sql = '';
 	/**
 	 * Name of field in channel entry eg store:price would be store
 	 * @var unknown
 	 */
-	var $ee_field_name = '';
-	var $field_label = '';
-	var $ee_type = '';
+	protected $ee_field_name = '';
+	protected $field_label = '';
+	protected $ee_type = '';
 	/**
 	 * Reefine object
 	 * @var Reefine
 	 */
-	public $reefine;
+	protected $reefine;
 	/**
 	 * Database column name (eg field_id_2)
 	 * @var unknown
 	 */
-	var $db_column;
+	protected $db_column;
+	
+	protected $channel_data_alias = '';
+	
+	protected $channel_titles_alias = '';
 	
 	function __construct($reefine, $field_name) {
+		
 		$this->reefine = $reefine;
 		$this->field_name = $field_name;
-		$this->column_name = $reefine->_custom_fields[$reefine->site][$field_name]['field_column'];
-		$this->title_column_name = $this->column_name;
+		$dbprefix = $reefine->dbprefix;
+		$this->channel_data_alias = "{$dbprefix}channel_data";
+		$this->channel_titles_alias = "{$dbprefix}channel_titles";
 		$this->assign_field_info($field_name);
-
-		//$label = $this->_custom_fields[$this->site][$field]['field_label'];
-		//$ee_type = $this->_custom_fields[$this->site][$field]['field_type'];
+	}
+	
+	function get_title_column() {
+		return $this->get_value_column();
+	}
+	
+	function get_value_column() {
+		if ($this->field_name=='title')
+			return $this->channel_titles_alias . '.title';
+		else
+			return $this->channel_data_alias . '.' . $this->get_field_by_key($this->field_name,'field_column');
+	}
+	
+	function get_join_sql() {
+		return '';
 	}
 	
 	function assign_field_info($ee_field_name) {
@@ -1722,6 +1742,18 @@ class Reefine_field {
 			$this->db_column = $ee_field['field_column'];
 		}
 	}
+	function get_field($field_name) {
+		if (isset($this->reefine->_custom_fields[$this->reefine->site][$field_name])) 
+			return $this->reefine->_custom_fields[$this->reefine->site][$field_name];
+		else
+			return null;
+	}
+	
+	function get_field_by_key($field_name,$key) {
+		$field = $this->get_field($field_name);
+		return $field[$key];
+	}
+	
 }
 
 /**
@@ -1746,15 +1778,23 @@ class Reefine_field_store extends Reefine_field {
 		$this->assign_field_info($ee_field_name);
 		$this->field_name = $field_name;
 		$this->child_column=$child_column;
-		$table_alias = 'store_products_' . preg_replace('/[^A-Z0-9]/i','_',$ee_field_name);
-		$this->column_name = "{$table_alias}.{$child_column}";
-		$this->title_column_name = $this->column_name;  
-		$this->join_sql = "LEFT OUTER JOIN {$dbprefix}store_products {$table_alias} " .
-			"ON {$table_alias}.entry_id = {$dbprefix}channel_data.entry_id ";
+		$this->table_alias = 'store_products_' . preg_replace('/[^A-Z0-9]/i','_',$ee_field_name);
 		
 	}
 	
 	
+	function get_value_column() {
+		$this->column_name = "{$this->table_alias}.{$this->child_column}";
+	}
+	
+	function get_title_column() {
+		return $this->get_value_column();
+	}
+	
+	function get_join_sql() {
+		return "LEFT OUTER JOIN {$this->reefine->dbprefix}store_products {$this->table_alias} " .
+			"ON {$this->table_alias}.entry_id = {$this->channel_data_alias}.entry_id ";
+	}
 	
 }
 
@@ -1765,18 +1805,93 @@ class Reefine_field_store extends Reefine_field {
  */
 class Reefine_field_publisher extends Reefine_field {
 	
+	private $session_language_id;
+	
 	function __construct($reefine,$field_name,$ee_field_name) {
-		$dbprefix = $reefine->dbprefix;
+		parent::__construct($reefine, $ee_field_name);
+		
 		$this->reefine = $reefine;
-		$this->assign_field_info($ee_field_name);
+		
 		$this->field_name = $ee_field_name;
-		$this->column_name = "{$dbprefix}publisher_data.{$this->db_column}";
-		$this->title_column_name = $this->column_name;
-		$session_language_id = intval(ee()->publisher_model->current_language['id']);
-		$this->join_sql = "LEFT OUTER JOIN {$dbprefix}publisher_data " .
-		"ON {$dbprefix}publisher_data.entry_id = {$dbprefix}channel_data.entry_id " .
-		"AND {$dbprefix}publisher_data.publisher_status IN ('', " . $this->reefine->db->escape($this->reefine->status) . ") " .
-		"AND {$dbprefix}publisher_data.publisher_lang_id = {$session_language_id} ";
+		
+		$this->session_language_id = intval(ee()->publisher_model->current_language['id']);
+		
+	}
+	
+	function get_value_column() {
+		return "{$this->reefine->dbprefix}publisher_data.{$this->db_column}";
+	}
+	
+	function get_title_column() {
+		return $this->get_value_column();
+	}
+	
+	function get_join_sql() {
+		return "LEFT OUTER JOIN {$this->reefine->dbprefix}publisher_data " .
+		"ON {$this->reefine->dbprefix}publisher_data.entry_id = {$this->channel_data_alias}.entry_id " .
+		"AND {$this->reefine->dbprefix}publisher_data.publisher_status IN ('', " . $this->reefine->db->escape($this->reefine->status) . ") " .
+		"AND {$this->reefine->dbprefix}publisher_data.publisher_lang_id = {$this->session_language_id} ";
+	}
+	
+}
+
+class Reefine_field_relationship extends Reefine_field {
+	
+	private $relation_field_id;
+	
+	private $child_field_name;
+	private $parent_field_name;
+	private $table_alias;
+	private $table_alias_titles;
+	private $table_alias_data;
+	
+	function __construct($reefine,$field_name,$parent_field_name,$child_field_name) {
+		parent::__construct($reefine, $parent_field_name);
+		
+		$this->reefine = $reefine;
+		
+		$this->relation_field_id = $this->get_field_by_key($parent_field_name, 'field_id');
+		
+		$this->parent_field_name = $parent_field_name;
+		$this->child_field_name=$child_field_name;
+		
+		$this->table_alias = 'relation_' . preg_replace('/[^A-Z0-9]/i','_',$this->relation_field_id);
+		$this->table_alias_titles = 'relation_' . preg_replace('/[^A-Z0-9]/i','_',$this->relation_field_id) . '_titles';
+		$this->table_alias_data = 'relation_' . preg_replace('/[^A-Z0-9]/i','_',$this->relation_field_id) . '_data';
+		
+		
 	
 	}
+	
+	function get_value_column() {
+		if ($this->child_field_name=='')
+			// Return url_title so we get a nice url for list filters
+			return "{$this->table_alias_titles}.url_title";
+		else if ($this->child_field_name=='title')
+			// return full title, good for search filters
+			return "{$this->table_alias_titles}.title";
+		else
+			// return column data
+			return "{$this->table_alias_data}." . $this->get_field_by_key($this->child_field_name,'field_column');
+	}
+	
+	function get_title_column() {
+		if ($this->child_field_name=='' || $this->child_field_name=='title')
+			return "{$this->table_alias_titles}.title";
+		else
+			return "{$this->table_alias_data}." . $this->get_field_by_key($this->child_field_name,'field_column');
+	}
+	
+	function get_join_sql() {
+	
+		return "LEFT OUTER JOIN {$this->reefine->dbprefix}relationships {$this->table_alias} " .
+		"ON {$this->table_alias}.parent_id = {$this->channel_data_alias}.entry_id " .
+		"AND {$this->table_alias}.field_id = {$this->relation_field_id} " .
+		"LEFT OUTER JOIN {$this->reefine->dbprefix}channel_titles {$this->table_alias_titles} " .
+		"ON {$this->table_alias_titles}.entry_id = {$this->table_alias}.child_id " .
+		"LEFT OUTER JOIN {$this->reefine->dbprefix}channel_data {$this->table_alias_data} " .
+		"ON {$this->table_alias_data}.entry_id = {$this->table_alias}.child_id ";
+	}
+	
+	
 }
