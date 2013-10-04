@@ -1433,6 +1433,7 @@ class Reefine {
 					} else {
 						// only output filters that have more than 0 entries or are currently active.
 						$list_group_tag = $this->arrayCopy($group,'filters'); // copy group except for filters
+						$list_group_tag['filters']=array();
 						foreach ($group['filters'] as $filter) {
 							if ($filter['filter_active'] || $filter['filter_quantity']>0) // filter is active or has filters
 								$list_group_tag['filters'][] = $this->arrayCopy($filter);
