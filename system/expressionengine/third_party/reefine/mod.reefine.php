@@ -435,18 +435,18 @@ class Reefine {
 			foreach (explode('|',$fields_tag) as $field_name)
 			{
 				$field = $this->get_field_obj($field_name);
-				
+				$ee_field = $field->get_field();	
 				if ($field_name == 'title')
 					$default = $this->default_group_by_type['title'];
-				else if (isset($this->default_group_by_type[$field->ee_type]))
-					$default = $this->default_group_by_type[$field->ee_type];
+				else if (isset($this->default_group_by_type[$ee_field['field_type']]))
+					$default = $this->default_group_by_type[$ee_field['field_type']];
 				else
 					$default = $this->default_group_by_type['text'];
 				$group_name = str_replace(':','_',$field_name);
 				$this->filter_groups[$field_name] = array(
 						'group_name' => $group_name,
 						'fields' => array($field),
-						'label' => isset($default['label']) ? $default['label'] : $field->field_label,
+						'label' => isset($default['label']) ? $default['label'] : $ee_field['field_label'],
 						'type'=>$default['type'],
 						'join'=>$default['join'],
 						'delimiter'=>$default['delimiter'],
@@ -495,8 +495,8 @@ class Reefine {
 				foreach ($group['fields'] as &$field) {
 							
 					$sql = "SELECT count(distinct({$this->dbprefix}channel_data.entry_id)) as filter_quantity, " .
-							"min(CAST({$field->get_value_column()} AS DECIMAL(16,2))) as filter_min, " .
-							"max(CAST({$field->get_value_column()} AS DECIMAL(16,2))) as filter_max " .
+							"min(CAST({$field->get_value_column()} AS DECIMAL(25,4))) as filter_min, " .
+							"max(CAST({$field->get_value_column()} AS DECIMAL(25,4))) as filter_max " .
 							"FROM {$this->dbprefix}channel_data ";
 					//if ($this->include_channel_titles)
 					$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
@@ -531,6 +531,9 @@ class Reefine {
 						//$results[0]['filter_value']=$results[0]['filter_min'].'-'.$results[0]['filter_max'];
 
 						$results[0]['group_name']=$group_key;
+						// remove traling zeros on decimals
+						$results[0]['filter_min'] += 0;
+						$results[0]['filter_max'] += 0;
 						$filters[] = $results[0];
 					}
 				}
@@ -738,8 +741,12 @@ class Reefine {
 			// If group has values
 			if ($key==$include_group || (isset($group['values']) && count($group['values'])>0)) {
 				foreach ($group['fields'] as $field) {
-					if ($field->get_join_sql()!='')
-						$joins[] = $field->get_join_sql();
+					$field_join_sql = $field->get_join_sql();
+					if (is_array($field_join_sql))
+						// if its an array just add the array values onto the joins
+						$joins = array_merge($joins,$field_join_sql);
+					else if ($field_join_sql!='')
+						$joins[] = $field_join_sql;
 				}
 				if (count($group['category_group']) > 0) {
 					$cat_group_in_list = $group['cat_group_in_list'];
@@ -829,11 +836,11 @@ class Reefine {
 				
 				if (isset($group['values']['min']) && is_numeric($group['values']['min'])) {
 					$value = $this->db->escape_str($group['values']['min']);
-					$clauses[] = "CAST({$field->column_name} AS DECIMAL(16,2)) >= $value";
+					$clauses[] = "CAST({$field->get_value_column()} AS DECIMAL(25,4)) >= $value";
 				}
 				if (isset($group['values']['max']) && is_numeric($group['values']['max'])) {
 					$value = $this->db->escape_str($group['values']['max']);
-					$clauses[] = "CAST({$field->column_name} AS DECIMAL(16,2)) <= $value";
+					$clauses[] = "CAST({$field->get_value_column()} AS DECIMAL(25,4)) <= $value";
 				}
 			}
 		}
@@ -881,7 +888,7 @@ class Reefine {
 				$words = array();
 				$value = $this->db->escape_like_str($value);
 				foreach ($group['fields'] as $field) {
-					$words[] = " `{$field->column_name}` LIKE '%{$value}%'";
+					$words[] = " {$field->get_title_column()} LIKE '%{$value}%'";
 				}
 				foreach ($group['category_group'] as $cat_group) {
 					$cat_group = $this->db->escape_str($cat_group);
@@ -1656,7 +1663,13 @@ class Reefine {
 			// Publisher module detected so check the publisher fields instead
 			return new Reefine_field_publisher($this,$field_name, $field_name);
 		} else {
-			return new Reefine_field($this, $field_name);
+			$field_type = $this->_custom_fields[$this->site][$field_name]['field_type'];
+			if ($field_type=='relationship')
+				return new Reefine_field_relationship($this, $field_name, $field_name, '');
+			if ($field_type=='playa')
+				return new Reefine_field_playa($this, $field_name, $field_name, '');
+			else
+				return new Reefine_field($this, $field_name);
 		}
 	}
 }
@@ -1743,7 +1756,7 @@ class Reefine_field {
 			$this->db_column = $ee_field['field_column'];
 		}
 	}
-	function get_field($field_name) {
+	function get_field_by_name($field_name) {
 		if (isset($this->reefine->_custom_fields[$this->reefine->site][$field_name])) 
 			return $this->reefine->_custom_fields[$this->reefine->site][$field_name];
 		else
@@ -1751,8 +1764,12 @@ class Reefine_field {
 	}
 	
 	function get_field_by_key($field_name,$key) {
-		$field = $this->get_field($field_name);
+		$field = $this->get_field_by_name($field_name);
 		return $field[$key];
+	}
+	
+	function get_field() {
+		return $this->get_field_by_name($this->ee_field_name);
 	}
 	
 }
@@ -1884,15 +1901,84 @@ class Reefine_field_relationship extends Reefine_field {
 	}
 	
 	function get_join_sql() {
-	
-		return "LEFT OUTER JOIN {$this->reefine->dbprefix}relationships {$this->table_alias} " .
+		// join the main relationship table
+		$joins=array("LEFT OUTER JOIN {$this->reefine->dbprefix}relationships {$this->table_alias} " .
 		"ON {$this->table_alias}.parent_id = {$this->channel_data_alias}.entry_id " .
-		"AND {$this->table_alias}.field_id = {$this->relation_field_id} " .
-		"LEFT OUTER JOIN {$this->reefine->dbprefix}channel_titles {$this->table_alias_titles} " .
-		"ON {$this->table_alias_titles}.entry_id = {$this->table_alias}.child_id " .
-		"LEFT OUTER JOIN {$this->reefine->dbprefix}channel_data {$this->table_alias_data} " .
-		"ON {$this->table_alias_data}.entry_id = {$this->table_alias}.child_id ";
+		"AND {$this->table_alias}.field_id = {$this->relation_field_id} ");
+		// if we just need the titles for "relation" or "relation:title" fields
+		if ($this->child_field_name=='' || $this->child_field_name=='title')
+			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}channel_titles {$this->table_alias_titles} " .
+			"ON {$this->table_alias_titles}.entry_id = {$this->table_alias}.child_id ";
+		else
+			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}channel_data {$this->table_alias_data} " .
+			"ON {$this->table_alias_data}.entry_id = {$this->table_alias}.child_id ";
+		return $joins;
+	}
+}
+
+class Reefine_field_playa extends Reefine_field {
+
+	private $relation_field_id;
+
+	private $child_field_name;
+	private $parent_field_name;
+	private $table_alias;
+	private $table_alias_titles;
+	private $table_alias_data;
+
+	function __construct($reefine,$field_name,$parent_field_name,$child_field_name) {
+		parent::__construct($reefine, $parent_field_name);
+
+		$this->reefine = $reefine;
+
+		$this->relation_field_id = $this->get_field_by_key($parent_field_name, 'field_id');
+
+		$this->parent_field_name = $parent_field_name;
+		$this->child_field_name=$child_field_name;
+
+		$this->table_alias = 'relation_' . preg_replace('/[^A-Z0-9]/i','_',$this->relation_field_id);
+		$this->table_alias_titles = 'relation_' . preg_replace('/[^A-Z0-9]/i','_',$this->relation_field_id) . '_titles';
+		$this->table_alias_data = 'relation_' . preg_replace('/[^A-Z0-9]/i','_',$this->relation_field_id) . '_data';
+
+
+
+	}
+
+	function get_value_column() {
+		if ($this->child_field_name=='')
+			// Return url_title so we get a nice url for list filters
+			return "{$this->table_alias_titles}.url_title";
+		else if ($this->child_field_name=='title')
+			// return full title, good for search filters
+			return "{$this->table_alias_titles}.title";
+		else
+			// return column data
+			return "{$this->table_alias_data}." . $this->get_field_by_key($this->child_field_name,'field_column');
+	}
+
+	function get_title_column() {
+		if ($this->child_field_name=='' || $this->child_field_name=='title')
+			return "{$this->table_alias_titles}.title";
+		else
+			return "{$this->table_alias_data}." . $this->get_field_by_key($this->child_field_name,'field_column');
+	}
+
+	function get_join_sql() {
+		// join the main relationship table
+		$joins=array("LEFT OUTER JOIN {$this->reefine->dbprefix}playa_relationships {$this->table_alias} " .
+		"ON {$this->table_alias}.parent_entry_id = {$this->channel_data_alias}.entry_id " .
+		"AND {$this->table_alias}.parent_field_id = {$this->relation_field_id} ");
+		// if we just need the titles for "relation" or "relation:title" fields
+		if ($this->child_field_name=='' || $this->child_field_name=='title')
+			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}channel_titles {$this->table_alias_titles} " .
+			"ON {$this->table_alias_titles}.entry_id = {$this->table_alias}.child_entry_id ";
+		else
+			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}channel_data {$this->table_alias_data} " .
+			"ON {$this->table_alias_data}.entry_id = {$this->table_alias}.child_entry_id ";
+		return $joins;
 	}
 	
-	
+	function get_field() {
+		return $this->get_field_by_name($this->parent_field_name);
+	}
 }
