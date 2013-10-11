@@ -75,6 +75,11 @@ class Reefine {
 	 */
 	var $timestamp;
 	/**
+	 * Whether the tag has been requested via ajax or not.
+	 * @var boolean
+	 */
+	public $is_ajax_request = false;
+	/**
 	 * String to append to url that isnt related to Reefine. Will be the page offset eg "/P6"
 	 * @var unknown
 	 */
@@ -128,7 +133,7 @@ class Reefine {
 
 
 			// to fix annoying bug where EE puts exp_ in the wrong places.
-			$this->db = $this->EE->db;
+			$this->db = clone $this->EE->db;
 			$this->dbprefix = $this->EE->db->dbprefix;
 			$this->db->dbprefix = '';
 
@@ -146,26 +151,8 @@ class Reefine {
 			$this->theme = $this->get_theme($this->theme_name);
 
 
-			// if the search will be done via the URL then parse through it to get the filter values
-			if ($this->method=='url') {
-				// if freebie is being used then get the page url before freebie has messed about with it
-				if (isset($this->EE->uri->config->_global_vars['freebie_original_uri'])) {
-					$this->url = $this->EE->uri->config->_global_vars['freebie_original_uri'];
-				} else {
-					$this->url = $this->EE->router->uri->uri_string;
-				}
-				if (strpos($this->url,'/')!==0)
-					$this->url = '/'.$this->url;
-				
-				if (preg_match('/\/P(\d+)$/', $this->url, $matches)) {
-					$this->url_suffix = $matches[0]; 
-					$this->url = preg_replace('/\/P(\d+)$/', '', $this->url);
-				}
-				$this->filter_values = $this->parse_search_url($this->url_tag,$this->url);
 
-			}
-
-
+			$this->filter_values = $this->get_filter_values();
 
 			//
 			// get current search details
@@ -173,37 +160,10 @@ class Reefine {
 			//get a unique id of this particular search.
 			$this->filter_id = md5(serialize($this->filter_groups));
 
-			if ($this->method=='url') {
-				// check for any post/get values that may be submitted by form and redirect
-				// so that the url is correct.
-				foreach ($this->filter_groups as $group_name => &$group) {
-					$value = $this->EE->input->get_post($group_name);
-
-					if ($value !== false) {
-						$url = $this->get_filter_url($group_name,$value);
-						$this->EE->functions->redirect($this->create_url($url));
-						return;
-					}
-					if ($group['type']=='number_range') {
-						$value_min = $this->EE->input->get_post($group_name.'_min');
-						$value_max = $this->EE->input->get_post($group_name.'_max');
-
-						if (($value_min !== false) || ($value_max !== false)) {
-							$value_range = array();
-							if ($value_min !== false && $value_min != '')
-								$value_range['min']=$value_min;
-							if ($value_max !== false && $value_max != '')
-								$value_range['max']=$value_max;
-							$url = $this->get_filter_url($group_name,$value_range);
-							$this->EE->functions->redirect($this->create_url($url));
-							return;
-						}
-					}
-				}
-			}
-
+			
 			// change expressione ngin uri so paging works
 			if ($this->method=='url') {
+				$this->do_redirects_for_text_inputs();
 				$this->change_uri_for_paging();
 			}
 
@@ -211,14 +171,21 @@ class Reefine {
 			$this->set_filter_groups();
 
 			// get all possible urls for each filters and put in $this->filter_groups[]['filters']['url']
-			if ($this->method=='url') {
+			if ($this->method=='url' || $this->method=='ajax' || $this->method=='get') {
 				$this->add_filter_url_to_filters();
 			}
 			// get all entry ids for this search.
 			$this->entry_id_list = $this->get_entry_ids_from_database();
 			$this->theme->before_parse_tag_data();
-			$this->return_data = $this->get_tag_data_result($this->entry_id_list );
-
+			
+			$tag_array = $this->get_tag_data_result($this->entry_id_list );
+			
+			if ($this->method=='ajax' && $this->is_ajax_request) {
+				$ajax_output = $this->parse_final_template($this->tagdata,$tag_array);
+				$this->EE->output->send_ajax_response($ajax_output);
+			} else {
+				$this->return_data = $this->EE->TMPL->parse_variables_row($this->tagdata, $tag_array);
+			}
 		} catch (Exception $e) {
 			// Log error
 			$this->EE->db->dbprefix = $this->dbprefix;
@@ -232,6 +199,114 @@ class Reefine {
 		
 	}
 
+	private function do_redirects_for_text_inputs() {
+		// check for any post/get values that may be submitted by form and redirect
+		// so that the url is correct.
+		foreach ($this->filter_groups as $group_name => &$group) {
+			$value = $this->EE->input->get_post($group_name);
+	
+			if ($value !== false) {
+				$url = $this->get_filter_url($group_name,$value,true);
+				$this->EE->functions->redirect($this->create_url($url));
+				return;
+			}
+			if ($group['type']=='number_range') {
+				$value_min = $this->EE->input->get_post($group_name.'_min');
+				$value_max = $this->EE->input->get_post($group_name.'_max');
+	
+				if (($value_min !== false) || ($value_max !== false)) {
+					$value_range = array();
+					if ($value_min !== false && $value_min != '')
+						$value_range['min']=$value_min;
+					if ($value_max !== false && $value_max != '')
+						$value_range['max']=$value_max;
+					$url = $this->get_filter_url($group_name,$value_range,true);
+					$this->EE->functions->redirect($this->create_url($url));
+					return;
+				}
+			}
+		}
+	}
+	
+	private function parse_final_template($tagdata,$tag_array) {
+		// http://expressionengine.stackexchange.com/questions/1347/how-can-i-manually-parse-template-code-from-php
+		$html = '';
+		// back up existing TMPL class
+		$this->EE->load->library('template');
+		$OLD_TMPL = isset($this->EE->TMPL) ? $this->EE->TMPL : NULL;
+		$this->EE->TMPL = new EE_Template();
+		$html = $this->EE->TMPL->parse_variables_row($tagdata, $tag_array);
+		
+		// pretty lame that we need to manually load snippets
+		$result = $this->EE->db->select('snippet_name, snippet_contents')
+		->where('site_id', $this->site)
+		->or_where('site_id', 0)
+		->get('snippets')->result_array();
+		
+		$snippets = array();
+		foreach ($result as $row) {
+			$snippets[$row['snippet_name']] = $row['snippet_contents'];
+		}
+		
+		// merge snippets into global variables
+		$this->EE->config->_global_vars = array_merge($this->EE->config->_global_vars, $snippets);
+		
+		// parse email contents as complete template
+		$this->EE->TMPL->parse($html);
+		$html = $this->EE->TMPL->parse_globals($this->EE->TMPL->final_template);
+		
+		// restore old TMPL class
+		$this->EE->TMPL = $OLD_TMPL;
+		
+		return $html;
+		
+	}
+	
+	private function  get_filter_values() {
+		// if the search will be done via the URL then parse through it to get the filter values
+		if ($this->method=='url') {
+			// if freebie is being used then get the page url before freebie has messed about with it
+			if (isset($this->EE->uri->config->_global_vars['freebie_original_uri'])) {
+				$this->url = $this->EE->uri->config->_global_vars['freebie_original_uri'];
+			} else {
+				$this->url = $this->EE->router->uri->uri_string;
+			}
+			if (strpos($this->url,'/')!==0)
+				$this->url = '/'.$this->url;
+		
+			if (preg_match('/\/P(\d+)$/', $this->url, $matches)) {
+				$this->url_suffix = $matches[0];
+				$this->url = preg_replace('/\/P(\d+)$/', '', $this->url);
+			}
+			return $this->parse_search_url($this->url_tag,$this->url);
+		
+		} else if ($this->method=='post' || $this->method=='ajax' || $this->method=='get') {
+			if ($this->EE->input->get_post('ajax_request'))
+				$this->is_ajax_request=true;
+			$filter_values = array();
+			foreach ($this->filter_groups as $group_name => &$group) {
+				if ($group['type']=='number_range') {
+					$value_min = $this->EE->input->get_post($group_name.'_min');
+					$value_max = $this->EE->input->get_post($group_name.'_max');
+					$filter_values[$group_name] = array();
+					if ($value_min!==false && $value_min!=='')
+						$filter_values[$group_name]['min'] = $value_min;
+					if ($value_max!==false && $value_max!=='')
+						$filter_values[$group_name]['max'] = $value_max;
+				} else {
+					$value = $this->EE->input->get_post($group_name);
+					if (is_array($value)) {
+						// <option value="">Any</option> will post array('') so we need to ignore that
+						if (count($value)>0 && $value[0]!='')
+							$filter_values[$group_name] = $value;
+					} else if ($value!==false && $value!=='') { 
+						$filter_values[$group_name] = array($value);
+					}
+				}
+			}
+			return $filter_values;
+		}
+	}
 
 	private function get_theme($theme_name) {
 		if ($theme_name!='') {
@@ -1239,32 +1314,34 @@ class Reefine {
 		}
 	}
 
-	// get the url of a filter given a particular filter group name
-	private function get_filter_url($filter_group_name = '', $filter_value = null) {
-		//$url_template = trim($this->url_tag,'/');
-		$url_template = $this->url_tag;
-		$result = $url_template;
-		foreach ($this->url_tags as $tag) {
-
-			// group name
-			$group_name = $tag['group_name'];
-			$or_text = $tag['or_text'];
-			$any_text = $tag['any_text'];
-			$group = $this->filter_groups[$group_name];
+	/**
+	 * 
+	 * @param string $filter_group_name
+	 * @param string $filter_value
+	 * @param string $is_for_redirection only include value is this is for redirecting as we want to avoid clashes when using url in the form action for search/filter range types. 
+	 * @return multitype:Ambigous <multitype:, multitype:string >
+	 */
+	private function get_values_for_filter($filter_group_name = '', $filter_value = null, $is_for_redirection = false) {
+		$filter_values = array();
+		foreach ($this->filter_groups as $group_name => $group) {
 			$values = isset($group['values']) ? $group['values'] : array();
 			if ($group_name==$filter_group_name) {
 				// if filter is null then filter will have no values.
 				if (is_null($filter_value)) {
 					$values = array();
 				} else if ($group['type'] == 'number_range') {
-					$values = array();
-					if (isset($filter_value['min'])) $values['min']=$filter_value['min'];
-					if (isset($filter_value['max'])) $values['max']=$filter_value['max'];
+					$values = array(); // clear out existing values
+					if ($is_for_redirection) {
+						if (isset($filter_value['min'])) $values['min']=$filter_value['min'];
+						if (isset($filter_value['max'])) $values['max']=$filter_value['max'];
+					}
 				} else if ($group['type'] == 'search') {
 					// there can only be one search value so replace any previous value with the new one
-					$values = array($filter_value);
+ 
+					if ($is_for_redirection) { 
+						$values = array($filter_value);
+					}
 				} else {
-					// @todo:
 					$filter_value_index = array_search($filter_value,$values);
 					if ($group['join']=='none') {
 						// joining not allowed so only allow one filter value for this filter group
@@ -1280,6 +1357,44 @@ class Reefine {
 					}
 				}
 			}
+			$filter_values[$group['group_name']] = $values;
+		}
+		return $filter_values;
+	}
+	
+	/**
+	 * get the url of a filter given a particular filter group name
+	 * @param string $filter_group_name
+	 * @param string $filter_value
+	 * @return Ambigous <Ambigous, string, unknown>
+	 */
+	private function get_filter_url($filter_group_name = '', $filter_value = null, $is_for_redirection = false) {
+		$filter_values = $this->get_values_for_filter($filter_group_name, $filter_value, $is_for_redirection);
+		if ($this->method=='url') {
+			return $this->get_filter_url_from_filter_values($filter_values);
+		} else {
+			return $this->get_filter_querystring_from_filter_values($filter_values);
+		}
+	}
+	
+	/**
+	 * Make a URL for a filter for method="url" 
+	 * @param unknown $filter_values
+	 * @return Ambigous <string, unknown>
+	 */
+	private function get_filter_url_from_filter_values($filter_values) {
+		//$url_template = trim($this->url_tag,'/');
+		$url_template = $this->url_tag;
+		$result = $url_template;
+		// for each tag in reefine's url="" parameter
+		foreach ($this->url_tags as $tag) {
+
+			// group name
+			$group_name = $tag['group_name'];
+			$or_text = $tag['or_text'];
+			$any_text = $tag['any_text'];
+			$group = $this->filter_groups[$group_name];
+			$values = $filter_values[$group_name];
 			if (count($values)>0) {
 				if ($group['type'] == 'number_range') {
 					if (isset($values['min']) && !isset($values['max']))
@@ -1305,6 +1420,47 @@ class Reefine {
 	
 		return $result;
 	}
+
+
+	/**
+	 * Make a URL for a filter for method="url"
+	 * @param unknown $filter_values
+	 * @return Ambigous <string, unknown>
+	 */
+	private function get_filter_querystring_from_filter_values($filter_values) {
+		$qs = array();
+		// for each tag in reefine's url="" parameter
+		foreach ($this->filter_groups as $group) {
+	
+			// group name
+			$group_name = $group['group_name'];
+			$values = $filter_values[$group_name];
+			if (count($values)>0) {
+				if ($group['type'] == 'number_range') {
+					if (isset($values['min']))
+						$qs[] = $group_name . '_min=' . urlencode($values['min']); // at least x
+					if (isset($values['max']))
+						$qs[] = $group_name . '_max=' . urlencode($values['max']); // at least x
+				} else {
+					foreach ($values as $v) {
+						$qs[] = $group_name . '[]=' . urlencode($v);
+					}
+				}
+			}
+			
+		}
+		$result = ee()->uri->uri_string() . '?' . implode($qs,'&');
+		// add a leading slash if one isn't provided
+		//if (strpos($result,'/')!==0 && strpos($result,'http://')!==0 && strpos($result,'https://')!==0) {
+		//	$result = '/' . $result;
+		//}
+	
+		return $result;
+	}
+	
+	
+		
+	
 	
 	private function urlencode($value) {
 		// double encode URL
@@ -1375,6 +1531,7 @@ class Reefine {
 		$tag['search_groups'] = array();
 		$tag['list_groups'] = array();
 		$tag['number_range_groups'] = array();
+		$tag['method'] = $this->method;
 		
 		$entry_ids = '';
 
@@ -1470,7 +1627,7 @@ class Reefine {
 		}
 		
 		// parse it
-			return $this->EE->TMPL->parse_variables_row($this->tagdata, $tag);
+		return $tag;
 
 	}
 	

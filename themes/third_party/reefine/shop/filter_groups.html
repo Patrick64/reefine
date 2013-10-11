@@ -1,8 +1,9 @@
+<div class="progress"></div>
 <div role="search">
 <div class="reefine_search">
 	{search_groups}
 		{filters}
-		<form method="post" class="{filter_active_class}">
+		<form method="post" class="{filter_active_class}" action="{url}">
 			<input type="hidden" name="XID" value="{XID_HASH}" /> 
 			<label for="{group_name}">{label}</label>
 		  <input
@@ -14,7 +15,7 @@
 		{/filters}
 	{/search_groups}
 </div>
-<div class="reefine_sidebar">
+<div class="reefine_sidebar" id="reefine_sidebar">
 	{if total_active_filters > 0}
 	<div class="reefine_active_filters">	
 		<h3>Selected Criteria</h3>
@@ -44,17 +45,19 @@
 				</ul>
 		{/list_groups}
 		{number_range_groups}
+			{filters} 
 			<h3 class="group_{group_name}">{label}</h3>			
-			<form method="post" class="number_range" >
+			<form method="post" class="number_range"  action="{url}">
 			<input type="hidden" name="XID" value="{XID_HASH}" /> 
-				{filters} 
+				
 				<input type="text" name="{group_name}_min" id="{group_name}_min" placeholder="{filter_min}"
 					value="{filter_min_value}" aria-label="Minimum value"/>
 					&mdash; <input type="text" name="{group_name}_max" id="{group_name}_max" placeholder="{filter_max}"
 					value="{filter_max_value}" aria-label="Maximum value"/>
-				{/filters} 
+			 
 				<input type="submit" name="submit" value="Go" />
 			</form>
+			{/filters}
 		{/number_range_groups}
 	</div>
 </div>

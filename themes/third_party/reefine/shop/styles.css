@@ -9,6 +9,31 @@ font-family: arial,sans-serif;
 font-size: 12px;
 margin-bottom: 40px;
 box-shadow: 0px 0px 8px 0px #333;
+position:relative;
+}
+
+.reefine .progress {
+	background: rgba(255,255,255,0.8) url(loading.gif) no-repeat center center;
+	height:256px; width:256px;
+	margin:-128px 0 0 -128px;
+	border-radius:20px;
+	left:50%;
+	top:50%;
+	position:absolute;
+	opacity:0;
+	z-index:10;
+	
+	display:none;
+}
+
+.reefine.loading .progress {
+	display:block;
+	opacity:1;
+	-webkit-transition: opacity 1s ease-in-out;
+	-moz-transition: opacity 1s ease-in-out;
+	-o-transition: opacity 1s ease-in-out;
+	-ms-transition: opacity 1s ease-in-out;
+	transition: opacity 1s ease-in-out;
 }
 
 .reefine a {
@@ -176,4 +201,32 @@ float: right;
 font-weight: bold;
 font-size: 14px;
 cursor: pointer;
+}
+
+.reefine .reefine_list select {
+	width:100%;
+}
+
+select.reefine_multiple {
+	height:8em;
+}
+
+.reefine #reefine_submit {
+	width: 80%;
+	background: #fff;
+	border: solid 2px #fff;
+	border-radius: 9px;
+	font-size: 1.5em;
+	cursor: pointer;
+	color: #000;
+	margin: 0 auto 1em auto;
+	display: block;
+	box-shadow: 0px 0px 8px 0px #fff;
+	text-transform: uppercase;
+	font-weight: bold;
+}
+
+.reefine #reefine_submit:hover {
+	background:#000;
+	color:#fff;
 }
