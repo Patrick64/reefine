@@ -202,29 +202,8 @@ class Reefine {
 	private function do_redirects_for_text_inputs() {
 		// check for any post/get values that may be submitted by form and redirect
 		// so that the url is correct.
-		foreach ($this->filter_groups as $group_name => &$group) {
-			$value = $this->EE->input->get_post($group_name);
-	
-			if ($value !== false) {
-				$url = $this->get_filter_url($group_name,$value,true);
-				$this->EE->functions->redirect($this->create_url($url));
-				return;
-			}
-			if ($group['type']=='number_range') {
-				$value_min = $this->EE->input->get_post($group_name.'_min');
-				$value_max = $this->EE->input->get_post($group_name.'_max');
-	
-				if (($value_min !== false) || ($value_max !== false)) {
-					$value_range = array();
-					if ($value_min !== false && $value_min != '')
-						$value_range['min']=$value_min;
-					if ($value_max !== false && $value_max != '')
-						$value_range['max']=$value_max;
-					$url = $this->get_filter_url($group_name,$value_range,true);
-					$this->EE->functions->redirect($this->create_url($url));
-					return;
-				}
-			}
+		foreach ($this->filter_groups as $group_name => $group) {
+			$group->do_redirect_for_text_input();
 		}
 	}
 	
@@ -285,24 +264,7 @@ class Reefine {
 				$this->is_ajax_request=true;
 			$filter_values = array();
 			foreach ($this->filter_groups as $group_name => &$group) {
-				if ($group['type']=='number_range') {
-					$value_min = $this->EE->input->get_post($group_name.'_min');
-					$value_max = $this->EE->input->get_post($group_name.'_max');
-					$filter_values[$group_name] = array();
-					if ($value_min!==false && $value_min!=='')
-						$filter_values[$group_name]['min'] = $value_min;
-					if ($value_max!==false && $value_max!=='')
-						$filter_values[$group_name]['max'] = $value_max;
-				} else {
-					$value = $this->EE->input->get_post($group_name);
-					if (is_array($value)) {
-						// <option value="">Any</option> will post array('') so we need to ignore that
-						if (count($value)>0 && $value[0]!='')
-							$filter_values[$group_name] = $value;
-					} else if ($value!==false && $value!=='') { 
-						$filter_values[$group_name] = array($value);
-					}
-				}
+				$filter_values[$group_name] = $group->get_filter_value_from_post();
 			}
 			return $filter_values;
 		}
@@ -349,19 +311,6 @@ class Reefine {
 		
 	}
 
-	private function html_encode_filters() {
-		foreach ($this->filter_groups as &$group) {
-			$group['group_name'] =  htmlspecialchars($group['group_name'], ENT_QUOTES);
-			$group['label'] =  htmlspecialchars($group['label'], ENT_QUOTES);
-			//$group['clear_url'] =  htmlspecialchars($group['clear_url'], ENT_QUOTES);
-			foreach ($group['filters'] as &$filter) {
-				$filter['filter_value'] =  htmlspecialchars($filter['filter_value'], ENT_QUOTES);
-				$filter['group_name'] =  htmlspecialchars($filter['group_name'], ENT_QUOTES);
-				//$filter['url'] =  htmlspecialchars($filter['url'], ENT_QUOTES);
-			}
-		}
-	}
-
 	/**
 	 * Fetch all parameters for tag
 	 */
@@ -388,23 +337,17 @@ class Reefine {
 		foreach ($this->EE->TMPL->tagparams as $key => $value) {
 			if (preg_match('/filter\:(.+)\:.+/',$key,$matches)) {
 				$group_name = $matches[1];
-				if (!isset($this->filter_groups[$group_name]))
-					$this->filter_groups[$group_name] = array('group_name'=>$group_name,'values'=>array());
+				if (!isset($this->filter_groups[$group_name])) {
+					$group_type = $this->get_filter_group_setting($group_name, 'type', 'list');
+					$group = Reefine_group::create_group_by_type($group_type, $group_name, $this);
+					$this->filter_groups[$group_name] = $group;
+				}
 			}
 		}
 
 		// go through all filter groups to check for settings int tag parameters
 		$this->add_all_filter_group_settings();
-		/*
-		foreach ($this->filter_groups as $group_name => &$group) {
-			if (isset($group['fields'])) {
-				foreach ($group['fields'] as $field) {
-					if (!isset($this->_custom_fields[$this->site][$field]))
-						throw new Exception ('Custom field ' . $field . ' not found.');
-				}
-			}
-		}
-		*/
+		
 		// read search:xyz="" tag and create an sql where clause from it.
 		if (count($this->EE->TMPL->search_fields)>0) {
 			$this->search_field_where_clause = $this->get_search_field_where_clause($this->EE->TMPL->search_fields);
@@ -427,29 +370,24 @@ class Reefine {
 	 * get settings from tag parameters
 	 */
 	private function add_all_filter_group_settings() {
+		/* @var $group Reefine_group */
 		foreach ($this->filter_groups as $group_name => &$group) {
 
-			
-			// if group doesnt have fields assign it as an empty array	
-			if (!isset($group['fields']))
-				$group['fields'] = array();
-				
 			// get all field names in param
 			$field_names = $this->get_filter_group_setting($group_name, 'fields', array(), 'array');
 			foreach ($field_names as $field_name) {
-				$group['fields'][] = $this->get_field_obj($field_name);
+				$group->fields[] = $this->get_field_obj($field_name);
 			}
 			// add rest of settings which are strings/arrays/booleans
-			$this->add_filter_group_setting($group_name, 'label', $group_name);
-			$this->add_filter_group_setting($group_name, 'type', 'list');
-			$this->add_filter_group_setting($group_name, 'delimiter', '');
-			$this->add_filter_group_setting($group_name, 'join', 'or', 'text');
-			$this->add_filter_group_setting($group_name, 'orderby', 'value', 'text');
-			$this->add_filter_group_setting($group_name, 'category_group', array(), 'array');
-			$this->add_filter_group_setting($group_name, 'show_empty_filters', false, 'bool');
+			$this->add_filter_group_setting($group, 'label', $group_name);
+			$this->add_filter_group_setting($group, 'delimiter', '');
+			$this->add_filter_group_setting($group, 'join', 'or', 'text');
+			$this->add_filter_group_setting($group, 'orderby', 'value', 'text');
+			$this->add_filter_group_setting($group, 'category_group', array(), 'array');
+			$this->add_filter_group_setting($group, 'show_empty_filters', false, 'bool');
 			
-			if (count($group['category_group'])>0) {
-				$group['cat_group_in_list'] = $this->array_to_in_list($group['category_group']);
+			if (count($group->category_group)>0) {
+				$group->cat_group_in_list = $this->array_to_in_list($group->category_group);
 			}
 
 
@@ -465,15 +403,13 @@ class Reefine {
 	* @param unknown_type $default default value
 	* @param unknown_type $type data type: array, bool or text
 	*/
-	private function add_filter_group_setting($group_name, $key, $default, $type = 'text' ) {
+	private function add_filter_group_setting($group, $key, $default, $type = 'text' ) {
 		// if the filter group already contains a value for this key then this is the new default.
 		// this would be set from get_field_filters_from_parameters function
-		if (isset($this->filter_groups[$group_name][$key])) {
-			$default = $this->filter_groups[$group_name][$key];
+		if (!empty($group->$key) && $group->$key!='') {
+			$default = $group->$key;
 		}
-		$result = $this->get_filter_group_setting($group_name, $key, $default, $type);
-		$this->filter_groups[$group_name][$key] = $result;
-
+		$group->$key = $this->get_filter_group_setting($group->group_name, $key, $default, $type);
 	}
 	
 	/**
@@ -518,17 +454,16 @@ class Reefine {
 				else
 					$default = $this->default_group_by_type['text'];
 				$group_name = str_replace(':','_',$field_name);
-				$this->filter_groups[$field_name] = array(
-						'group_name' => $group_name,
-						'fields' => array($field),
-						'label' => isset($default['label']) ? $default['label'] : $ee_field['field_label'],
-						'type'=>$default['type'],
-						'join'=>$default['join'],
-						'delimiter'=>$default['delimiter'],
-						'values'=>array()
-				);
+				$override_type = $this->get_filter_group_setting($group_name, 'type', '');
+				$group_type = ($override_type == '' ? $default['type'] : $override_type);
+				/* @var $group Reefine_group */
+				$group = Reefine_group::create_group_by_type($group_type, $group_name, $this);
+				$group->fields = array($field);
+				$group->label = isset($default['label']) ? $default['label'] : $ee_field['field_label'];
+				$group->join = $default['join'];
+				$group->delimiter = $default['delimiter'];
+				$this->filter_groups[$field_name] = $group;
 			
-
 			}
 		}
 	}
@@ -539,271 +474,22 @@ class Reefine {
 	 */
 	private function set_filter_groups() {
 		$this->filter_where_clause = $this->get_filter_fields_where_clause();
-		foreach ($this->filter_groups as $group_key => &$group) {
-			$filters= array();
-			if ($group['type']=='list') {
-				// for each field in the filter group
-				foreach ($group['fields'] as &$field) {
-					// get list of possible values
-					$results = $this->get_filter_groups_for_list($group_key,$group,$field->get_value_column(),$field->get_title_column());
-					$filters = array_merge($filters,$results);
-				}
-				if (count($group['category_group'])>0) {
-					$results = $this->get_filter_groups_for_list($group_key,$group,"cat_{$group_key}.cat_url_title","cat_{$group_key}.cat_name",
-							"cat_{$group_key}.group_id IN {$group['cat_group_in_list']}");
-					$filters = array_merge($filters,$results);
-				}
-			} else if ($group['type']=='search') {
-				if (isset($group['values']) && count($group['values'])>0)
-					$filters[] = array(
-							'filter_value'=> $group['values'][0],
-							'filter_title'=> $group['values'][0],
-							'filter_quantity'=>1);
-				else
-					$filters[] = array(
-							'filter_value'=> '',
-							'filter_title' => '',
-							'filter_quantity'=>0);
-			} else if ($group['type']=='number_range') {
-				// get min/max ranges for number
-				// for each field in the filter group
-				foreach ($group['fields'] as &$field) {
-							
-					$sql = "SELECT count(distinct({$this->dbprefix}channel_data.entry_id)) as filter_quantity, " .
-							"min(CAST({$field->get_value_column()} AS DECIMAL(25,4))) as filter_min, " .
-							"max(CAST({$field->get_value_column()} AS DECIMAL(25,4))) as filter_max " .
-							"FROM {$this->dbprefix}channel_data ";
-					//if ($this->include_channel_titles)
-					$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
-					$sql .= $this->get_query_join_sql($group_key);
-					$sql .= "WHERE {$field->get_value_column()} <> '' ";
-					if (isset($this->channel_ids)) {
-						$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->channel_ids) . ")";
-					}
-					// ignore the current filter group in creating the where clause
-					$where_clause_excluding_group = $this->get_filter_fields_where_clause($group_key);
-					if ($where_clause_excluding_group !='')
-						$sql .= "AND " . $where_clause_excluding_group;
-					$results = $this->db->query($sql)->result_array();
-					if (count($results)==0)
-						$filters[] = array(
-								'filter_value'=>'',
-								'filter_title'=>'',
-								'filter_min'=>'',
-								'filter_max'=>'',
-								'filter_quantity'=>0,
-								'group_name'=>$group_key);
-					else {
-						if (isset($group['values']['min']) && isset($group['values']['max']))
-							$results[0]['filter_value']=$group['values']['min'] . ' - ' . $group['values']['max'];
-						else if (isset($group['values']['min']))
-							$results[0]['filter_value']='> ' . $group['values']['min'];
-						else if (isset($group['values']['max']))
-							$results[0]['filter_value']='< ' . $group['values']['max'];
-						else
-							$results[0]['filter_value']='';
-						$results[0]['filter_title']=$results[0]['filter_value'];
-						//$results[0]['filter_value']=$results[0]['filter_min'].'-'.$results[0]['filter_max'];
-
-						$results[0]['group_name']=$group_key;
-						// remove traling zeros on decimals
-						$results[0]['filter_min'] += 0;
-						$results[0]['filter_max'] += 0;
-						$filters[] = $results[0];
-					}
-				}
-			}
-			// remove duplicates http://stackoverflow.com/a/946300/1102000
-			$filters = array_map("unserialize", array_unique(array_map("serialize", $filters)));
-			// if group has delimiter
-			$delimiter = isset($group['delimiter']) ? $group['delimiter'] : '';
-			if ($delimiter!='') {
-				$this->decompose_delimited_filters($filters,$delimiter);
-			}
-
-
-
-			// set totals for use in templates
-			$group['filters'] = $filters;
-			$group['total_filters'] = count($filters);
-			$group['active_filters'] = 0;
-			$group['matching_filters'] = 0;
-
-			// set filter_active value if the filter is selected
-			foreach ($group['filters'] as &$filter) {
-				// make group name available in {filter} tag
-				$filter['group_name'] = $group['group_name'];
-				if ($group['type'] == 'number_range') {
-					if (isset($group['values']) && count($group['values'])>0) {
-						$filter['filter_active'] = true;
-						$group['active_filters'] += 1;
-					} else {
-						$filter['filter_active'] = false;
-					}
-				} else if (isset($group['values']) && in_array($filter['filter_value'],$group['values'])) {
-					$filter['filter_active']=true;
-					$group['active_filters'] += 1;
-				} else {
-					$filter['filter_active']=false;
-				}
-				if ($filter['filter_quantity']>0)
-					$group['matching_filters'] += 1;
-			}
-
-			// sort filters on orderby
-			$this->sort_filters($group['filters'],$group['orderby']);
-
+		foreach ($this->filter_groups as &$group) {
+			$group->set_filters();
 		}
 
 	}
 
-	static function compare_filter_by_value($a, $b)
-	{
-		return (strcmp($a['filter_value'], $b['filter_value'])>0) ? 1 : -1;
-	}
-
-	static function compare_filter_by_count($a, $b){
-		if ($a['filter_quantity'] == $b['filter_quantity'])
-			return self::compare_filter_by_value($a, $b);
-		else
-			return $a['filter_quantity'] < $b['filter_quantity'] ? 1 : -1;
-	}
-
-	static function compare_filter_by_active($a, $b){
-		if ($a['filter_active'] == $b['filter_active'])
-			return self::compare_filter_by_value($a, $b);
-		else
-			return $a['filter_active'] < $b['filter_active'] ? 1 : -1;
-	}
-
-	static function compare_filter_by_active_count($a, $b){
-		if ($a['filter_active'] == $b['filter_active'])
-			return self::compare_filter_by_count($a, $b);
-		else
-			return $a['filter_active'] < $b['filter_active'] ? 1 : -1;
-	}
-
-	/**
-	 * Sort filters based on $sort
-	 * @param array $filters
-	 * @param string $sort value, count, active, or active_count
-	 */
-	private function sort_filters(&$filters,$sort) {
-		if ($sort == 'value')
-			usort($filters, array($this->class_name,"compare_filter_by_value"));
-		else if ($sort == 'quantity')
-			usort($filters, array($this->class_name,"compare_filter_by_count"));
-		else if ($sort == 'active')
-			usort($filters, array($this->class_name,"compare_filter_by_active"));
-		else if ($sort == 'active_quantity')
-			usort($filters, array($this->class_name,"compare_filter_by_active_count"));
-	}
-
-	/**
-	 * This will run through all filters['filter_value'] fields to find a delimiter
-	 * if it finds one it will split the delimiter up so "green|blue" will be split into seperate filters
-	 * @param array $filters List of filters with
-	 * @param string $delimiter
-	 */
-	private function decompose_delimited_filters(&$filters,$delimiter) {
-		// make an array of filters to lookup their positions in array
-
-		$filter_index = $this->get_filter_indexes($filters);
-		// divide up the filter by delimiter, eg a field might have spain|france|italy which will need to be seperated into
-		// individual filters.
-		foreach ($filters as $key => &$filter) {
-			// see if it has a delimiter first
-			if (strpos($filter['filter_value'],$delimiter)!==false) {
-				// for each delimited item (eg spain,france,italy)
-				foreach (explode($delimiter,$filter['filter_value']) as $filter_value_sub) {
-
-					//$move_to_filter = $this->in_subarray($filters,'filter_value',$filter_value_sub);
-					// see if the item is already in the filters
-					if (!isset($filter_index[$filter_value_sub])) {
-						// ccreate a new filter
-						$filters[] = array(
-								'filter_value' => $filter_value_sub,
-								'filter_quantity' => $filter['filter_quantity'],
-								'filter_title' => $filter_value_sub
-						);
-						$filter_index[$filter_value_sub] = count($filters)-1;
-					} else {
-						// just add count to an existing filter
-						$filters[$filter_index[$filter_value_sub]]['filter_quantity'] += $filter['filter_quantity'];
-					}
-				}
-
-			}
-		}
-		$reorder_required = false;
-		foreach ($filters as $key => &$filter) {
-			// see if it has a delimiter first
-			if (strpos($filter['filter_value'],$delimiter)!==false) {
-				// remove this filter as it's a compound one
-				unset($filters[$key]);
-				//array_splice($filters,$key,1);
-				$reorder_required=true;
-			}
-		}
-		if ($reorder_required)
-			$filters = array_values($filters);
-		
-
-	}
-
-	private function get_filter_indexes(&$filters) {
-		$filter_index = array();
-		foreach ($filters as $index => $filter) {
-			$filter_index[$filter['filter_value']] = $index;
-		}
-		return $filter_index;
-	}
-
-	private function get_filter_groups_for_list($group_key,&$group,$column_name,$title_column_name,$extra_clause = '') {
-		// have to give up on active record select coz of this bug: http://stackoverflow.com/questions/7927458/codeigniter-db-select-strange-behavior
-		// if group is multi select then ignore the current filter group in creating the where clause
-		if ($group['join']=='or' || $group['join']=='none')
-			$count_where = $this->get_filter_fields_where_clause($group_key);
-		else // join is 'and' so use current filter
-			$count_where = $this->filter_where_clause;
-
-		if ($count_where == '') {
-			$sql_filter_count = "{$this->dbprefix}channel_data.entry_id"; //$this->db->select("count(field_id_{$field_id}) as filter_quantity", false);
-		} else {
-			$sql_filter_count = "CASE WHEN {$count_where} THEN {$this->dbprefix}channel_data.entry_id ELSE NULL END as entry_id";
-		}
-
-		$sql = "SELECT {$column_name} as filter_value, " .
-		"{$title_column_name} as filter_title, {$sql_filter_count} " .
-		"FROM {$this->dbprefix}channel_data ";
-			
-		//if ($this->include_channel_titles)
-		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
-		$sql .= $this->get_query_join_sql($group_key);
-		$sql .= "WHERE {$column_name} <> '' ";
-		if (isset($this->channel_ids)) {
-			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->channel_ids) . ")";
-		}
-		if ($extra_clause!='')
-			$sql .= " AND ({$extra_clause}) ";
-		// Wrap sql statement in select statement so we can get total of each distinct entry
-		$sql = "SELECT filter_value, filter_title, count(distinct(entry_id)) as filter_quantity ".
-				" FROM ({$sql}) t1 GROUP BY filter_value, filter_title";
-			
-		$results = $this->db->query($sql)->result_array();
-		return $results;
-	}
 	
+		
 	/**
 	 * Get SQL for joins that are required.
 	 * @param string $include_group Always include this group in the joins
 	 * @return string
 	 */
-	private function get_query_join_sql($include_group) {
+	public function get_query_join_sql($include_group) {
 		$joins = array();
-		foreach($this->filter_groups as $index => $group) {
-			
-		}
+		
 		// also left outer join categories
 		if ($this->include_categories)
 			$joins[] = "LEFT OUTER JOIN {$this->dbprefix}category_posts global_catp " .
@@ -812,26 +498,11 @@ class Reefine {
 			"ON global_cat.cat_id = global_catp.cat_id " ;
 
 		// add joins for custom fields.
-		foreach ($this->filter_groups as $key => &$group) {
+		foreach ($this->filter_groups as $key => $group) {
 			// If group has values
-			if ($key==$include_group || (isset($group['values']) && count($group['values'])>0)) {
-				foreach ($group['fields'] as $field) {
-					$field_join_sql = $field->get_join_sql();
-					if (is_array($field_join_sql))
-						// if its an array just add the array values onto the joins
-						$joins = array_merge($joins,$field_join_sql);
-					else if ($field_join_sql!='')
-						$joins[] = $field_join_sql;
-				}
-				if (count($group['category_group']) > 0) {
-					$cat_group_in_list = $group['cat_group_in_list'];
-					$joins[] = "LEFT OUTER JOIN {$this->dbprefix}category_posts catp_{$key} " .
-					"ON catp_{$key}.entry_id = {$this->dbprefix}channel_data.entry_id \n" .
-					"LEFT OUTER JOIN {$this->dbprefix}categories cat_{$key} " .
-					"ON cat_{$key}.cat_id = catp_{$key}.cat_id AND cat_{$key}.group_id IN {$cat_group_in_list} \n" ;
-				}	
+			if ($key==$include_group || (isset($group->values) && count($group->values)>0)) {
+				$joins = array_merge($joins,$group->get_join_sql());
 			}
-			
 		}
 		// remove duplicates
 		$joins = array_map("unserialize", array_unique(array_map("serialize", $joins)));		
@@ -871,13 +542,8 @@ class Reefine {
 		//// make where statement based on filter fields
 		foreach ($this->filter_groups as $key => $group) {
 			// If the field has some selected values and it's not one to ignore..
-			if ($ignore_filter_group!=$key && isset($group['values']) && count($group['values'])>0) {
-				if ($group['type']=='number_range')
-					$clauses = array_merge($clauses,$this->get_where_clause_for_number_range($key, $group));
-				else if ($group['type']=='search')
-					$clauses = array_merge($clauses,$this->get_where_clause_for_search($key, $group));
-				else // type is list
-					$clauses = array_merge($clauses,$this->get_where_clause_for_list_group($key,$group));
+			if ($ignore_filter_group!=$key && isset($group->values) && count($group->values)>0) {
+				$clauses = array_merge($clauses,$group->get_where_clause());
 			}
 		}
 		// ensure status is open or whatever is supplied
@@ -903,25 +569,7 @@ class Reefine {
 
 	}
 
-	private function get_where_clause_for_number_range($key,&$group) {
-		$clauses = array();
-		if (isset($group['fields']) && count($group['values'])>0) {
-
-			foreach ($group['fields'] as $field) {
-				
-				if (isset($group['values']['min']) && is_numeric($group['values']['min'])) {
-					$value = $this->db->escape_str($group['values']['min']);
-					$clauses[] = "CAST({$field->get_value_column()} AS DECIMAL(25,4)) >= $value";
-				}
-				if (isset($group['values']['max']) && is_numeric($group['values']['max'])) {
-					$value = $this->db->escape_str($group['values']['max']);
-					$clauses[] = "CAST({$field->get_value_column()} AS DECIMAL(25,4)) <= $value";
-				}
-			}
-		}
-		return $clauses;
-	}
-
+	
 	private function get_in_list($field, $in_list) {
 		$result = '';
 		if (count($in_list)==0)
@@ -953,126 +601,7 @@ class Reefine {
 	}
 
 
-	//
-	private function get_where_clause_for_search($key,&$group) {
-		$group_name = $group['group_name'];
-		$clauses = array();
-		if (isset($group['fields']) && count($group['values'])>0) {
-			$search_terms = array();
-			foreach (explode(' ',$group['values'][0]) as $value) {
-				$words = array();
-				$value = $this->db->escape_like_str($value);
-				foreach ($group['fields'] as $field) {
-					$words[] = " {$field->get_title_column()} LIKE '%{$value}%'";
-				}
-				foreach ($group['category_group'] as $cat_group) {
-					$cat_group = $this->db->escape_str($cat_group);
-					$words[] = " ( cat_{$group_name}.cat_name LIKE '%{$value}%' AND cat_{$group_name}.group_id={$cat_group} )";
-				}
 
-				$search_terms[] = '(' . implode(' OR ',$words) . ')';
-			}
-			$clauses[] = "\n(" . implode("\n AND ",$search_terms) . ")";
-		}
-
-		return $clauses;
-	}
-
-	// construct the where clause for a group of type "list"
-	private function get_where_clause_for_list_group($key,&$group) {
-		$clauses = array();
-		if (!isset($group['category_group']))
-			$group['category_group']=array();
-		$group_name = $group['group_name'];
-
-		// channel fields
-		
-			$field_list = array();
-			// a filter group can have many fields so go through each
-			$in_list = array();
-			// make a list of possible values for the field
-			foreach ($group['values'] as $value) {
-				$in_list[] = $this->db->escape($value);
-			}
-			// example: if field_id_2 is colour and user selects all green or red items:
-			//  field_id_2 IN ('green','red')
-			if (isset($group['delimiter']) && $group['delimiter']!='') {
-				// delimiter seperate values
-
-				$delimiter = $this->db->escape($group['delimiter']);
-				if ($group['join']=='or' || $group['join']=='none') {
-					// at least one value must be in the listed fields or category groups and search within delimiters
-					$field_list = array();
-					foreach ($group['fields'] as $field) {
-						foreach ($in_list as $value) {
-							$field_list[] = " instr(concat({$delimiter},{$field->get_value_column()},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
-						}
-					}
-					if (count($group['category_group'])>0)
-						$field_list[] = " ( cat_{$group_name}.cat_url_title IN (" . implode(',',$in_list) . ") AND cat_{$group_name}.group_id IN {$group['cat_group_in_list']})";
-
-					$clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
-				} else {
-					$field_list = array();
-					foreach ($in_list as $value) {
-						$value_list = array();
-						foreach ($group['fields'] as $field) {
-							$value_list[] = " instr(concat({$delimiter},{$field->get_value_column()},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
-						}
-
-						if (count($group['category_group'])>0)
-							$value_list[] = "{$this->dbprefix}channel_data.entry_id IN (SELECT exp_category_posts.entry_id " .
-							"FROM exp_category_posts " .
-							"JOIN exp_categories USING (cat_id) " .
-							"WHERE cat_url_title  = {$value} AND group_id IN {$group['cat_group_in_list']} )";
-
-						$field_list[] = "\n(" . implode("\n OR ",$value_list) . ")";
-					}
-
-					$clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
-				}
-
-			} else {
-				if ($group['join']=='or' || $group['join']=='none') {
-					// group is multi select so the row must contain at least one value in any fields
-					// eg..
-					// ( `field_id_15` IN ('Bosch','Green')
-					// OR  `field_id_12` IN ('Bosch','Green'))
-					$field_list = array();
-					foreach ($group['fields'] as $field) {
-						$field_list[] = " {$field->get_value_column()} IN (" . implode(',',$in_list) . ")";
-					}
-					if (count($group['category_group'])>0)
-						$field_list[] = " ( cat_{$group_name}.cat_url_title IN (" . implode(',',$in_list) . ") AND cat_{$group_name}.group_id IN {$group['cat_group_in_list']})";
-
-					$clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
-				} else {
-					// field is not multi select. create an sql query with this format:
-					// ( ( field1 = value1 OR field2 = value1 ) AND (field1 = value2 OR field2 = value2) )
-					//  eg...
-					// (( `field_id_15` = 'Bosch' OR  `field_id_12` = 'Bosch')
-					// AND ( `field_id_15` = 'Green' OR  `field_id_12` = 'Green'))
-					// this means the row must contain all the active filters in any of the filter group's fields
-					$field_list = array();
-					foreach ($in_list as $value) {
-						$value_list = array();
-						foreach ($group['fields'] as $field) {
-							$value_list[] = " {$field->column_name} = {$value}";
-						}
-						if (count($group['category_group'])>0)
-							$value_list[] = "{$this->dbprefix}channel_data.entry_id IN (SELECT exp_category_posts.entry_id " .
-							"FROM exp_category_posts " .
-							"JOIN exp_categories USING (cat_id) " .
-							"WHERE cat_url_title  = {$value} AND group_id IN {$group['cat_group_in_list']} )";
-
-						$field_list[] = "(" . implode(" OR ",$value_list) . ")";
-					}
-					$clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
-				}
-			}
-		
-		return $clauses;
-	}
 
 	/**
 	 * Get sql where for search: fields like what how channel entries works
@@ -1233,67 +762,21 @@ class Reefine {
 			$parts = explode('|',$tag_name);
 			// group name
 			$group_name = $parts[0];
-			$group = isset($this->filter_groups[$group_name]) ? $this->filter_groups[$group_name] : array();
-			$group_type = isset($group['type']) ? $group['type'] : 'list'; // list is default group type
-			if ($group_type=='number_range')
-				$default_or_text = '-to-';
-			else if (isset($group['join']) && $group['join']=='or')
-				$default_or_text = '-or-';
-			else
-				$default_or_text = '-and-';
-			$any_text = isset($parts[1]) ? $parts[1] : 'any';
-			$or_text = isset($parts[2]) ? $parts[2] : $default_or_text;
-			$min_text = isset($parts[3]) ? $parts[3] : 'at-least-';
-			$max_text = isset($parts[4]) ? $parts[4] : 'at-most-';
-			// save url parameter tags for use when creating filter urls
-			$this->url_tags[] = array(
-					'tag'=>'{'.$tag_name.'}',
-					'group_name'=>$group_name,
-					'or_text'=>$or_text,
-					'any_text'=>$any_text,
-					'min_text'=>$min_text,
-					'max_text'=>$max_text
-			);
-			// get the value of the tag
-
-			// if a tag value has been set
-			if (isset($tag_values[0][$tag_value_index])) {
-				$tag_value = $tag_values[0][$tag_value_index];
-				// if the value of the tag is not "any" then add the value
-				if ($tag_value!=$any_text && $tag_value!='') {
-					if ($group_type == 'number_range') {
-						$range = explode($or_text,$tag_value);
-						if (count($range)==2)
-							$filter_values[$group_name] = array(
-									'min'=>$range[0],
-									'max'=>$range[1]);
-						else if (strpos($tag_value,$min_text)!==false)
-							$filter_values[$group_name] = array(
-									'min'=>str_replace($min_text,'',$tag_value));
-						else if (strpos($tag_value,$max_text)!==false)
-							$filter_values[$group_name] = array(
-									'max'=>str_replace($max_text,'',$tag_value));
-						else // malformed
-							$filter_values[$group_name] = array();
-					} else {
-						$filter_values[$group_name] =  explode($or_text,$tag_value);
-					}
-					// value has been urlencoded so deencode the url
-					foreach ($filter_values[$group_name] as &$filter_value) {
-						$filter_value = $this->urldecode($filter_value);
-					}
-					// if a search on title is being performed then add a flag to include the
-					// channel_titles table in sql queries
-					if (isset($this->filter_groups[$group_name])
-							&& isset($this->filter_groups[$group_name]['fields'])
-							&& in_array('title', $this->filter_groups[$group_name]['fields']))
-						$this->include_channel_titles = true;
-
-
+			$group = isset($this->filter_groups[$group_name]) ? $this->filter_groups[$group_name] : false;
+				
+			if ($group) {
+				$url_tag = $group->get_filter_url_tags_array($tag_name,$parts);
+				$this->url_tags[] = $url_tag;
+				// if a tag value has been set
+				if (isset($tag_values[0][$tag_value_index])) {
+					$tag_value = $tag_values[0][$tag_value_index];
+					$filter_values[$group->group_name] = $group->get_filter_values_from_url($tag_value,$url_tag);
 				}
-
+				
 			}
-
+				
+				
+						// get the value of the tag
 		}
 		return $filter_values;
 
@@ -1302,15 +785,7 @@ class Reefine {
 	// must have values in filter_groups[]['values'] set
 	private function add_filter_url_to_filters() {
 		foreach ($this->filter_groups as $group_name => &$group) {
-			
-			foreach ($group['filters'] as &$filter) {
-				if ($group['type']=='list') {
-					$filter['url'] = $this->create_url($this->get_filter_url($group_name,$filter['filter_value']));
-				} else { // give url that will remove filter
-					$filter['url'] = $this->create_url($this->get_filter_url($group_name));
-				}
-			}
-			$group['clear_url'] = $this->create_url($this->get_filter_url($group_name,null));
+			$group->add_filter_url_to_filters();
 		}
 	}
 
@@ -1324,40 +799,15 @@ class Reefine {
 	private function get_values_for_filter($filter_group_name = '', $filter_value = null, $is_for_redirection = false) {
 		$filter_values = array();
 		foreach ($this->filter_groups as $group_name => $group) {
-			$values = isset($group['values']) ? $group['values'] : array();
 			if ($group_name==$filter_group_name) {
 				// if filter is null then filter will have no values.
-				if (is_null($filter_value)) {
-					$values = array();
-				} else if ($group['type'] == 'number_range') {
-					$values = array(); // clear out existing values
-					if ($is_for_redirection) {
-						if (isset($filter_value['min'])) $values['min']=$filter_value['min'];
-						if (isset($filter_value['max'])) $values['max']=$filter_value['max'];
-					}
-				} else if ($group['type'] == 'search') {
-					// there can only be one search value so replace any previous value with the new one
- 
-					if ($is_for_redirection) { 
-						$values = array($filter_value);
-					}
-				} else {
-					$filter_value_index = array_search($filter_value,$values);
-					if ($group['join']=='none') {
-						// joining not allowed so only allow one filter value for this filter group
-						if ($filter_value_index === false)
-							$values = array($filter_value);
-						else // user clicked on an active filter value so clear it
-							$values = array();
-					} else { // joining is allowed (join=or,join=and) so add the new filter value
-						if ($filter_value_index === false)
-							$values[] = $filter_value;
-						else // user clicked an avtive filter value so remove that value only
-							array_splice($values,$filter_value_index,1);
-					}
-				}
+				if (is_null($filter_value)) 
+					$filter_values[$group_name] = array();
+				else
+					$filter_values[$group_name] = $group->get_values_for_filter($filter_value, $is_for_redirection);
+			} else {
+				$filter_values[$group_name] = $group->values;
 			}
-			$filter_values[$group['group_name']] = $values;
 		}
 		return $filter_values;
 	}
@@ -1368,7 +818,7 @@ class Reefine {
 	 * @param string $filter_value
 	 * @return Ambigous <Ambigous, string, unknown>
 	 */
-	private function get_filter_url($filter_group_name = '', $filter_value = null, $is_for_redirection = false) {
+	public function get_filter_url($filter_group_name = '', $filter_value = null, $is_for_redirection = false) {
 		$filter_values = $this->get_values_for_filter($filter_group_name, $filter_value, $is_for_redirection);
 		if ($this->method=='url') {
 			return $this->get_filter_url_from_filter_values($filter_values);
@@ -1388,30 +838,11 @@ class Reefine {
 		$result = $url_template;
 		// for each tag in reefine's url="" parameter
 		foreach ($this->url_tags as $tag) {
-
 			// group name
 			$group_name = $tag['group_name'];
-			$or_text = $tag['or_text'];
-			$any_text = $tag['any_text'];
 			$group = $this->filter_groups[$group_name];
-			$values = $filter_values[$group_name];
-			if (count($values)>0) {
-				if ($group['type'] == 'number_range') {
-					if (isset($values['min']) && !isset($values['max']))
-						$url_value = $tag['min_text'].$values['min']; // at least x
-					else if (!isset($values['min']) && isset($values['max']))
-						$url_value = $tag['max_text'].$values['max']; // at most y
-					else if (isset($values['min']) && isset($values['max']))
-						$url_value = $values['min'].$tag['or_text'].$values['max']; // x to y
-				} else {
-					$url_value = implode($or_text,$this->urlencode_array($values));
-				}
-				//$url_value = $this->urlencode($url_value);
-				$result = str_replace($tag['tag'],$url_value,$result);
-
-			} else {
-				$result = str_replace($tag['tag'],$any_text,$result);
-			}
+			$group_url_tag_replacement = $group->get_group_url_tag_replacement($tag,$filter_values[$group_name]);
+			$result = str_replace($tag['tag'],$group_url_tag_replacement,$result);
 		}
 		// add a leading slash if one isn't provided
 		if (strpos($result,'/')!==0 && strpos($result,'http://')!==0 && strpos($result,'https://')!==0) {
@@ -1431,23 +862,7 @@ class Reefine {
 		$qs = array();
 		// for each tag in reefine's url="" parameter
 		foreach ($this->filter_groups as $group) {
-	
-			// group name
-			$group_name = $group['group_name'];
-			$values = $filter_values[$group_name];
-			if (count($values)>0) {
-				if ($group['type'] == 'number_range') {
-					if (isset($values['min']))
-						$qs[] = $group_name . '_min=' . urlencode($values['min']); // at least x
-					if (isset($values['max']))
-						$qs[] = $group_name . '_max=' . urlencode($values['max']); // at least x
-				} else {
-					foreach ($values as $v) {
-						$qs[] = $group_name . '[]=' . urlencode($v);
-					}
-				}
-			}
-			
+			$qs = array_merge($qs,$group->get_filter_querystring_from_filter_values($filter_values[$group->group_name]));
 		}
 		$result = ee()->uri->uri_string() . '?' . implode($qs,'&');
 		// add a leading slash if one isn't provided
@@ -1467,7 +882,7 @@ class Reefine {
 		return str_replace('%', '%40', urlencode($value)); 
 	}
 	
-	private function create_url($url)
+	public function create_url($url)
 	{
 		$url = $this->EE->functions->create_url($url);
 		// double encode URL
@@ -1481,7 +896,7 @@ class Reefine {
 	 * @param unknown $arr
 	 * @return mixed|multitype:
 	 */
-	private function urlencode_array($arr) {
+	public function urlencode_array($arr) {
 		foreach ($arr as &$value) {
 			$value = $this->urlencode($value);
 		}
@@ -1489,7 +904,7 @@ class Reefine {
 	}
 	
 	
-	private function urldecode($value) {
+	public function urldecode($value) {
 		return urldecode(str_replace('@','%',str_replace('%40','%',$value)));
 	}
 
@@ -1503,11 +918,7 @@ class Reefine {
 		foreach ($filter_values as $group_name => $values) {
 			if (isset($this->filter_groups[$group_name])) {
 				$group = &$this->filter_groups[$group_name];
-				if (isset($group['values']) && count($group['values'])>0) {
-					array_merge($group['values'], $values);
-				} else {
-					$group['values'] = $values;
-				}
+				$group->add_filter_values($values);
 
 			} else {
 				throw new Exception('filter not found');
@@ -1548,81 +959,34 @@ class Reefine {
 		$tag['entries'][0]['entry_ids'] = $entry_ids;
 		$tag['entries'][0]['total_entries'] = count($results);
 
-		// for number_range set the filter_min_value and filter_max_value
-		foreach ($this->filter_groups as &$group) {
-			$active_index = 0;
-			foreach ($group['filters'] as $filter_key => &$filter) {
-					
-				if ($filter['filter_active']) {
-					$filter['active_index'] = $active_index;
-					$active_index += 1;
-					$filter['filter_active_class'] = 'active';
-					$filter['filter_active_boolean'] = 'true';
-				} else {
-					$filter['filter_active_class'] = 'inactive';
-					$filter['filter_active_boolean'] = 'false';
-				}
 
-				if ($group['type']=='number_range') {
-					$filter['filter_min_value'] = isset($group['values']['min']) ? $group['values']['min'] : '';
-					$filter['filter_max_value'] = isset($group['values']['max']) ? $group['values']['max'] : '';
-				}
-			}
-
-		}
 		
-		unset($filter);
 
 		// html encode all filter data such as values
-		$this->html_encode_filters();
+		//$this->html_encode_filters();
 
 		// now to do the filters. must be converted from associative array to normal array
 		// EE has bugs when a tag pair is used more than once so make a copy for the breadcrumb
 		if ($this->tagdataHasTag('filter_groups')) {
 			foreach ($this->filter_groups as $group_name => &$group) {
-				$tag['filter_groups'][] = $group;
+				$tag['filter_groups'][] = $group->get_filters_for_output();
 			}
 		}
 
 		foreach ($this->filter_groups as $group_name => &$group) {
 			// go through each filter group to see if a seperate filter is specified			
 			if ($this->tagdataHasTag($group_name)) 
-				$tag[$group_name] = array($this->arrayCopy($group));
+				$tag[$group_name] = array($group->get_filters_for_output());
 			// make the type group tag tag if it is specified (eg number_range_groups)
-			$type_group_name = $group['type'] . '_groups';
+			$type_group_name = $group->type . '_groups';
 			
 			if ($this->tagdataHasTag($type_group_name)) {
-				if ($group['type']=='list') {
-					// show_empty_filters will output all filters even if they have 0 entries
-					if (isset($group['show_empty_filters']) && $group['show_empty_filters']) {
-						$tag[$type_group_name][] = $this->arrayCopy($group);
-					} else {
-						// only output filters that have more than 0 entries or are currently active.
-						$list_group_tag = $this->arrayCopy($group,'filters'); // copy group except for filters
-						$list_group_tag['filters']=array();
-						foreach ($group['filters'] as $filter) {
-							if ($filter['filter_active'] || $filter['filter_quantity']>0) // filter is active or has filters
-								$list_group_tag['filters'][] = $this->arrayCopy($filter);
-						}
-						$tag[$type_group_name][] = $list_group_tag;
-					}
-				} else {
-					// initialise array
-					if (!isset($tag[$type_group_name]))
-						$tag[$type_group_name] = array();
-					$tag[$type_group_name][] = $this->arrayCopy($group);
-				}
+				$tag[$type_group_name][] = $group->get_filters_for_output();
 			}
 			
 			// make the {active_filters} tag
-			if ($this->tagdataHasTag('active_groups') && count($group['values'])>0) {
-				$active_group = $this->arrayCopy($group);
-				$active_group['filters'] = array(); // remove filters
-				foreach ($group['filters'] as $filter) {
-					if ($filter['filter_active']) // filter is active
-						$active_group['filters'][] = $this->arrayCopy($filter);
-				}
-				$tag['active_groups'][] = $active_group;
+			if ($this->tagdataHasTag('active_groups') && count($group->values)>0) {
+				$tag['active_groups'][] = $group->get_filters_for_output(true);
 			}
 		}
 		
@@ -2138,4 +1502,929 @@ class Reefine_field_playa extends Reefine_field {
 	function get_field() {
 		return $this->get_field_by_name($this->parent_field_name);
 	}
+}
+
+class Reefine_group {
+	/**
+	 * Name of group as defined in parameters
+	 * @var unknown
+	 */
+	public $group_name = '';
+	/**
+	 * Label to be passed to output
+	 * @var unknown
+	 */
+	public $label = '';
+	/**
+	 * Type eg list, number_range 
+	 * @var unknown
+	 */
+	public $type = '';
+	/**
+	 * delimiter used for multipe values
+	 * @var unknown
+	 */ 
+	public $delimiter = '';
+	/**
+	 * join type
+	 * @var unknown
+	 */
+	public $join = 'or';
+	/**
+	 * orering of filters
+	 * @var unknown
+	 */
+	public $orderby = 'value';
+	/**
+	 * array of category group IDs
+	 * @var unknown
+	 */
+	public $category_group = array();
+	/**
+	 * The database
+	 * @var CI_DB_active_record
+	 */
+	public $db;
+	/**
+	 * Whether to show empty filters. 
+	 * @var unknown
+	 */
+	public $show_empty_filters = false;
+	/**
+	 * database prefix
+	 * @var string
+	 */
+	public $dbprefix = 'exp_';
+	/**
+	 * category group IN list used for SQL
+	 * @var unknown
+	 */
+	public $cat_group_in_list = '';
+	/**
+	 * 
+	 * @var Reefine_field[]
+	 */
+	public $fields = array();
+	
+	/**
+	 * 
+	 * @var Reefine
+	 */
+	protected $reefine;
+	
+	/**
+	 * List of all possible filters
+	 * @var array
+	 */
+	public $filters = array();
+	/**
+	 * Total number of filters
+	 * @var int
+	 */
+	public $total_filters = 0;
+	/** Number of currently active filters ie filters that match the filter values 
+	 * @var int */
+	public $active_filters = 0;
+	/** Number of filters that have more than one returned results (quantity>0)
+	 * @var int */
+	public $matching_filters = 0;
+	
+	
+	function __construct($reefine,$group_name) {
+		$this->reefine = $reefine;
+		$this->group_name = $group_name;
+		$this->values = array();
+		$this->label = $group_name;
+		// if group doesnt have fields assign it as an empty array
+		$this->fields = array();
+		$this->dbprefix = $reefine->dbprefix;
+		$this->db = $reefine->db;
+	} 
+	
+	public function add_filter_values($filter_values) {
+		if (isset($filter_values))
+			$this->values = array_merge($this->values, $filter_values);
+	}
+	
+	
+	static public function create_group_by_type($group_type,$group_name,$reefine) {
+		$class_name = 'Reefine_group_' . $group_type;
+		return new $class_name($reefine,$group_name);
+	}
+	
+	public function get_settings_from_parameters($params) {
+		
+	}
+	
+	public function do_redirect_for_text_input() {
+		$value = ee()->input->get_post($this->group_name);
+		
+		if ($value !== false) {
+			$url = $this->reefine->get_filter_url($group_name,$value,true);
+			ee()->functions->redirect($this->reefine->create_url($url));
+			return;
+		}
+		
+	}
+	
+	
+	public function get_filter_value_from_post() {
+		$value = ee()->input->get_post($this->group_name);
+		if (is_array($value)) {
+			// <option value="">Any</option> will post array('') so we need to ignore that
+			if (count($value)>0 && $value[0]!='')
+				return $value;
+			else 
+				return array();
+		} else if ($value!==false && $value!=='') {
+			return array($value);
+		} else {
+			return array();
+		}
+		
+	}
+	
+	public function get_filter_url_tags_array($tag_name,$parts) {
+		//$group_type = isset($group['type']) ? $group['type'] : 'list'; // list is default group type
+		if ($this->type=='number_range') // TODO: move to number range class
+			$default_or_text = '-to-';
+		else if ($this->join=='or')
+			$default_or_text = '-or-';
+		else
+			$default_or_text = '-and-';
+		$any_text = isset($parts[1]) ? $parts[1] : 'any';
+		$or_text = isset($parts[2]) ? $parts[2] : $default_or_text;
+		$min_text = isset($parts[3]) ? $parts[3] : 'at-least-';
+		$max_text = isset($parts[4]) ? $parts[4] : 'at-most-';
+		// save url parameter tags for use when creating filter urls
+		return array(
+				'tag'=>'{'.$tag_name.'}',
+				'group_name'=>$this->group_name,
+				'or_text'=>$or_text,
+				'any_text'=>$any_text,
+				'min_text'=>$min_text,
+				'max_text'=>$max_text
+		);
+		
+	}
+	
+	public function get_filter_values_from_url($tag_value,$url_tag) {
+		// if the value of the tag is not "any" then add the value
+		if ($tag_value!=$url_tag['any_text'] && $tag_value!='') {
+			if ($this->type == 'number_range') {
+				$range = explode($url_tag['or_text'],$tag_value);
+				if (count($range)==2)
+					$filter_values[$this->group_name] = array(
+							'min'=>$range[0],
+							'max'=>$range[1]);
+				else if (strpos($tag_value,$url_tag['min_text'])!==false)
+					$filter_values = array(
+							'min'=>str_replace($url_tag['min_text'],'',$tag_value));
+				else if (strpos($tag_value,$url_tag['max_text'])!==false)
+					$filter_values = array(
+							'max'=>str_replace($url_tag['max_text'],'',$tag_value));
+				else // malformed
+					$filter_values = array();
+			} else {
+				$filter_values =  explode($url_tag['or_text'],$tag_value);
+			}
+			// value has been urlencoded so deencode the url
+			foreach ($filter_values as &$filter_value) {
+				$filter_value = $this->reefine->urldecode($filter_value);
+			}
+			// if a search on title is being performed then add a flag to include the
+			// channel_titles table in sql queries
+			// TODO: Fix this:
+			//if (isset($this->filter_groups[$group_name])
+			//&& isset($this->filter_groups[$group_name]['fields'])
+			//&& in_array('title', $this->filter_groups[$group_name]['fields']))
+			//	$this->include_channel_titles = true;
+
+			return $filter_values;
+		}
+
+
+	}
+	
+	/**
+	 * Go though each filter and add the url attribute to filter array
+	 */
+	public function add_filter_url_to_filters() {
+		foreach ($this->filters as &$filter) {
+			if ($this->type=='list') {
+				$filter['url'] = $this->reefine->create_url($this->reefine->get_filter_url($this->group_name,$filter['filter_value']));
+			} else { // give url that will remove filter
+				$filter['url'] = $this->reefine->create_url($this->reefine->get_filter_url($this->group_name));
+			}
+		}
+		$this->clear_url = $this->reefine->create_url($this->reefine->get_filter_url($this->group_name,null));
+	}
+	
+	/**
+	 * Get filter values to use for creating the URL for a filter. 
+	 * @param unknown $filter_value
+	 * @param unknown $is_for_redirection
+	 */
+	public function get_values_for_filter($filter_value, $is_for_redirection) {
+		// abstract
+	}
+	
+	/**
+	 * Get value to put in url that replaces the tag in the tag="" parameter 
+	 * @param unknown $url_tag
+	 * @param unknown $values
+	 * @return string|unknown eg "X-or-Y"
+	 */
+	public function get_group_url_tag_replacement($url_tag,$values) {
+		$or_text = $url_tag['or_text'];
+		$any_text = $url_tag['any_text'];
+		if (count($values)>0) {
+			// eg X-or-Y-or-Z
+			return implode($or_text,$this->reefine->urlencode_array($values)); 
+		} else {
+			return $any_text;
+		}		
+	}
+	
+	/**
+	 * Get array of querystrings for values
+	 * @param unknown $values
+	 * @return multitype:string
+	 */
+	public function get_filter_querystring_from_filter_values($values) {
+		$qs = array();
+		if (count($values)>0) {
+			foreach ($values as $v) {
+				$qs[] = urlencode($this->group_name) . '[]=' . urlencode($v);
+			}
+		} 
+		return $qs;
+	}
+	
+	
+	public function get_join_sql() {
+		$joins = array();
+		foreach ($this->fields as $field) {
+			$field_join_sql = $field->get_join_sql();
+			if (is_array($field_join_sql))
+				// if its an array just add the array values onto the joins
+				$joins = array_merge($joins,$field_join_sql);
+			else if ($field_join_sql!='')
+				$joins[] = $field_join_sql;
+		}
+		if (count($this->category_group) > 0) {
+			$cat_group_in_list = $this->cat_group_in_list;
+			$joins[] = "LEFT OUTER JOIN {$this->dbprefix}category_posts catp_{$this->group_name} " .
+			"ON catp_{$this->group_name}.entry_id = {$this->dbprefix}channel_data.entry_id \n" .
+			"LEFT OUTER JOIN {$this->dbprefix}categories cat_{$this->group_name} " .
+			"ON cat_{$this->group_name}.cat_id = catp_{$this->group_name}.cat_id AND cat_{$this->group_name}.group_id IN {$cat_group_in_list} \n" ;
+		}
+		return $joins;
+	}
+	
+
+	/**
+	 * This will run through all filters['filter_value'] fields to find a delimiter
+	 * if it finds one it will split the delimiter up so "green|blue" will be split into seperate filters
+	 * @param array $filters List of filters with
+	 * @param string $delimiter
+	 */
+	protected function decompose_delimited_filters($delimiter) {
+		// make an array of filters to lookup their positions in array
+	
+		$filter_index = $this->get_filter_indexes();
+		// divide up the filter by delimiter, eg a field might have spain|france|italy which will need to be seperated into
+		// individual filters.
+		foreach ($this->filters as $key => &$filter) {
+			// see if it has a delimiter first
+			if (strpos($filter['filter_value'],$delimiter)!==false) {
+				// for each delimited item (eg spain,france,italy)
+				foreach (explode($delimiter,$filter['filter_value']) as $filter_value_sub) {
+	
+					//$move_to_filter = $this->in_subarray($filters,'filter_value',$filter_value_sub);
+					// see if the item is already in the filters
+					if (!isset($filter_index[$filter_value_sub])) {
+						// ccreate a new filter
+						$this->filters[] = array(
+								'filter_value' => $filter_value_sub,
+								'filter_quantity' => $filter['filter_quantity'],
+								'filter_title' => $filter_value_sub
+						);
+						$filter_index[$filter_value_sub] = count($this->filters)-1;
+					} else {
+						// just add count to an existing filter
+						$this->filters[$filter_index[$filter_value_sub]]['filter_quantity'] += $filter['filter_quantity'];
+					}
+				}
+	
+			}
+		}
+		unset($filter);
+		$reorder_required = false;
+		foreach ($this->filters as $key => &$filter) {
+			// see if it has a delimiter first
+			if (strpos($filter['filter_value'],$delimiter)!==false) {
+				// remove this filter as it's a compound one
+				unset($this->filters[$key]);
+				//array_splice($filters,$key,1);
+				$reorder_required=true;
+			}
+		}
+		if ($reorder_required)
+			$this->filters = array_values($this->filters);
+	
+	
+	}
+	
+	private function get_filter_indexes() {
+		$filter_index = array();
+		foreach ($this->filters as $index => $filter) {
+			$filter_index[$filter['filter_value']] = $index;
+		}
+		return $filter_index;
+	}
+	
+	
+
+	static function compare_filter_by_value($a, $b)
+	{
+		return (strcmp($a['filter_value'], $b['filter_value'])>0) ? 1 : -1;
+	}
+	
+	static function compare_filter_by_count($a, $b){
+		if ($a['filter_quantity'] == $b['filter_quantity'])
+			return self::compare_filter_by_value($a, $b);
+		else
+			return $a['filter_quantity'] < $b['filter_quantity'] ? 1 : -1;
+	}
+	
+	static function compare_filter_by_active($a, $b){
+		if ($a['filter_active'] == $b['filter_active'])
+			return self::compare_filter_by_value($a, $b);
+		else
+			return $a['filter_active'] < $b['filter_active'] ? 1 : -1;
+	}
+	
+	static function compare_filter_by_active_count($a, $b){
+		if ($a['filter_active'] == $b['filter_active'])
+			return self::compare_filter_by_count($a, $b);
+		else
+			return $a['filter_active'] < $b['filter_active'] ? 1 : -1;
+	}
+	
+	/**
+	 * Sort filters based on $sort
+	 * @param array $filters
+	 * @param string $sort value, count, active, or active_count
+	 */
+	public function sort_filters() {
+		if ($this->orderby == 'value')
+			usort($this->filters, array(get_class($this),"compare_filter_by_value"));
+		else if ($this->orderby == 'quantity')
+			usort($this->filters, array(get_class($this),"compare_filter_by_count"));
+		else if ($this->orderby == 'active')
+			usort($this->filters, array(get_class($this),"compare_filter_by_active"));
+		else if ($this->orderby == 'active_quantity')
+			usort($this->filters, array(get_class($this),"compare_filter_by_active_count"));
+	}
+	
+	/**
+	 * Get array of group values formatted for output with array of filters.
+	 * @param string $only_show_active If true only returns active filters
+	 * @return array
+	 */
+	function get_filters_for_output($only_show_active = false) {
+		$group = array();
+		
+		// get attributes of group
+		foreach (get_object_vars($this) as $key => $val) {
+			if (is_string($val)) {
+				$group[$key] = htmlspecialchars($val, ENT_QUOTES);
+			}
+		}
+		
+		// format filters for output
+		$group['filters'] = array();
+		$active_index = 0;
+		foreach ($this->filters as $filter_key => $filter) {
+			$filter_active = $filter['filter_active'];
+			$filter_quantity = $filter['filter_quantity'];
+			// Check that - if only show active then only show if active ALSO if hide empty filters then only show if filter is not empty or is active
+			if ( (!$only_show_active || $filter_active) && 
+				($this->show_empty_filters || $filter_active || $filter_quantity>0) )  {
+				
+				$filter_out = array();
+				
+				if ($filter['filter_active']) 
+					$active_index += 1;
+				// used for formatting 
+				$filter_out['active_index'] = $active_index;
+				$filter_out['filter_active_class'] = ( $filter_active ? 'active' : 'inactive' );
+				$filter_out['filter_active_boolean'] = ( $filter_active ? 'true' : 'false' );
+				
+				// stop xss
+				foreach ($filter as $key => $val) {
+					$filter_out[$key] = htmlspecialchars($val, ENT_QUOTES);
+				}
+				
+				// number range doessome stuff
+				$this->format_filter_for_output($filter,$filter_out);
+				
+				$group['filters'][] = $filter_out;
+			}
+		}
+		
+		return $group;
+	}
+		
+	function format_filter_for_output($filter_in,&$filter_out) {
+		// abstract	
+	}
+	
+	public function get_where_clause() {
+		//abstract
+	}
+	
+}
+
+class Reefine_group_list extends Reefine_group {
+	public $type = 'list';
+	public function __construct($reefine,$group_name) {
+		parent::__construct($reefine,$group_name);
+	}
+	
+	function set_filters() {
+		$this->filters = array();
+		// for each field in the filter group
+		foreach ($this->fields as &$field) {
+			// get list of possible values
+			$results = $this->get_filter_groups_for_list($field->get_value_column(),$field->get_title_column());
+			$this->filters = array_merge($this->filters,$results);
+		}
+		if (count($this->category_group)>0) {
+			$results = $this->get_filter_groups_for_list("cat_{$this->group_name}.cat_url_title","cat_{$this->group_name}.cat_name",
+			"cat_{$this->group_name}.group_id IN {$this->cat_group_in_list}");
+			$this->filters = array_merge($this->filters,$results);
+		}
+		// remove duplicates http://stackoverflow.com/a/946300/1102000
+		$this->filters = array_map("unserialize", array_unique(array_map("serialize", $this->filters)));
+		// if group has delimiter
+		$delimiter = isset($this->delimiter) ? $this->delimiter : '';
+		if ($delimiter!='') {
+			$this->decompose_delimited_filters($delimiter);
+		}
+
+		// set totals for use in templates
+		$this->total_filters = count($this->filters);
+		$this->active_filters = 0;
+		$this->matching_filters = 0;
+		
+		// set filter_active value if the filter is selected
+		foreach ($this->filters as &$filter) {
+			// make group name available in {filter} tag
+			$filter['group_name'] = $this->group_name;
+			if (in_array($filter['filter_value'],$this->values)) {
+				$filter['filter_active']=true;
+				$this->active_filters += 1;
+			} else {
+				$filter['filter_active']=false;
+			}
+			if ($filter['filter_quantity']>0)
+				$this->matching_filters += 1;
+		}
+		
+		// sort filters on orderby
+		$this->sort_filters();
+		
+		
+	}
+	
+	private function get_filter_groups_for_list($column_name,$title_column_name,$extra_clause = '') {
+		// have to give up on active record select coz of this bug: http://stackoverflow.com/questions/7927458/codeigniter-db-select-strange-behavior
+		// if group is multi select then ignore the current filter group in creating the where clause
+		if ($this->join=='or' || $this->join=='none')
+			$count_where = $this->reefine->get_filter_fields_where_clause($this->group_name);
+		else // join is 'and' so use current filter
+			$count_where = $this->reefine->filter_where_clause;
+	
+		if ($count_where == '') {
+			$sql_filter_count = "{$this->dbprefix}channel_data.entry_id"; //$this->db->select("count(field_id_{$field_id}) as filter_quantity", false);
+		} else {
+			$sql_filter_count = "CASE WHEN {$count_where} THEN {$this->dbprefix}channel_data.entry_id ELSE NULL END as entry_id";
+		}
+	
+		$sql = "SELECT {$column_name} as filter_value, " .
+		"{$title_column_name} as filter_title, {$sql_filter_count} " .
+		"FROM {$this->dbprefix}channel_data ";
+			
+		//if ($this->include_channel_titles)
+		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
+		$sql .= $this->reefine->get_query_join_sql($this->group_name);
+		$sql .= "WHERE {$column_name} <> '' ";
+		if (isset($this->reefine->channel_ids)) {
+			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
+		}
+		if ($extra_clause!='')
+			$sql .= " AND ({$extra_clause}) ";
+		// Wrap sql statement in select statement so we can get total of each distinct entry
+		$sql = "SELECT filter_value, filter_title, count(distinct(entry_id)) as filter_quantity ".
+		" FROM ({$sql}) t1 GROUP BY filter_value, filter_title";
+			
+		$results = $this->reefine->db->query($sql)->result_array();
+		return $results;
+	}
+	
+	/**
+	 * If filter is active then filter will be deactivated when clicked so 
+	 * @see Reefine_group::get_values_for_filter()
+	 */
+	public function get_values_for_filter($filter_value, $is_for_redirection) {
+		$filter_value_index = array_search($filter_value,$this->values);
+		$values = $this->values;
+		if ($this->join=='none') {
+			// joining not allowed so only allow one filter value for this filter group
+			if ($filter_value_index === false)
+				$values = array($filter_value);
+			else // user clicked on an active filter value so clear it
+				$values = array();
+		} else { // joining is allowed (join=or,join=and) so add the new filter value
+			if ($filter_value_index === false)
+				$values[] = $filter_value;
+			else // user clicked an avtive filter value so remove that value only
+				array_splice($values,$filter_value_index,1);
+		}
+		return $values;
+	}
+	
+	// construct the where clause for a group of type "list"
+	public function get_where_clause() {
+		$clauses = array();
+		if (!isset($this->category_group))
+			$this->category_group=array();
+		
+	
+		// channel fields
+		$field_list = array();
+		// a filter group can have many fields so go through each
+		$in_list = array();
+		// make a list of possible values for the field
+		foreach ($this->values as $value) {
+			$in_list[] = $this->db->escape($value);
+		}
+		// example: if field_id_2 is colour and user selects all green or red items:
+		//  field_id_2 IN ('green','red')
+		if (isset($this->delimiter) && $this->delimiter!='') {
+			// delimiter seperate values
+	
+			$delimiter = $this->db->escape($this->delimiter);
+			if ($this->join=='or' || $this->join=='none') {
+				// at least one value must be in the listed fields or category groups and search within delimiters
+				$field_list = array();
+				foreach ($this->fields as $field) {
+					foreach ($in_list as $value) {
+						$field_list[] = " instr(concat({$delimiter},{$field->get_value_column()},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
+					}
+				}
+				if (count($this->category_group)>0)
+					$field_list[] = " ( cat_{$this->group_name}.cat_url_title IN (" . implode(',',$in_list) . ") AND cat_{$this->group_name}.group_id IN {$this->cat_group_in_list})";
+	
+				$clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
+			} else {
+				$field_list = array();
+				foreach ($in_list as $value) {
+					$value_list = array();
+					foreach ($this->fields as $field) {
+						$value_list[] = " instr(concat({$delimiter},{$field->get_value_column()},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
+					}
+	
+					if (count($this->category_group)>0)
+						$value_list[] = "{$this->dbprefix}channel_data.entry_id IN (SELECT exp_category_posts.entry_id " .
+						"FROM exp_category_posts " .
+						"JOIN exp_categories USING (cat_id) " .
+						"WHERE cat_url_title  = {$value} AND group_id IN {$this->cat_group_in_list} )";
+	
+					$field_list[] = "\n(" . implode("\n OR ",$value_list) . ")";
+				}
+	
+				$clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
+			}
+	
+		} else {
+			if ($this->join=='or' || $this->join=='none') {
+				// group is multi select so the row must contain at least one value in any fields
+				// eg..
+				// ( `field_id_15` IN ('Bosch','Green')
+				// OR  `field_id_12` IN ('Bosch','Green'))
+				$field_list = array();
+				foreach ($this->fields as $field) {
+					$field_list[] = " {$field->get_value_column()} IN (" . implode(',',$in_list) . ")";
+				}
+				if (count($this->category_group)>0)
+					$field_list[] = " ( cat_{$this->group_name}.cat_url_title IN (" . implode(',',$in_list) . ") AND cat_{$this->group_name}.group_id IN {$this->cat_group_in_list})";
+	
+				$clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
+			} else {
+				// field is not multi select. create an sql query with this format:
+				// ( ( field1 = value1 OR field2 = value1 ) AND (field1 = value2 OR field2 = value2) )
+				//  eg...
+				// (( `field_id_15` = 'Bosch' OR  `field_id_12` = 'Bosch')
+				// AND ( `field_id_15` = 'Green' OR  `field_id_12` = 'Green'))
+				// this means the row must contain all the active filters in any of the filter group's fields
+				$field_list = array();
+				foreach ($in_list as $value) {
+					$value_list = array();
+					foreach ($this->fields as $field) {
+						$value_list[] = " {$field->column_name} = {$value}";
+					}
+					if (count($this->category_group)>0)
+						$value_list[] = "{$this->dbprefix}channel_data.entry_id IN (SELECT exp_category_posts.entry_id " .
+						"FROM exp_category_posts " .
+						"JOIN exp_categories USING (cat_id) " .
+						"WHERE cat_url_title  = {$value} AND group_id IN {$this->cat_group_in_list} )";
+	
+					$field_list[] = "(" . implode(" OR ",$value_list) . ")";
+				}
+				$clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
+			}
+		}
+	
+		return $clauses;
+	}
+	
+}
+
+class Reefine_group_number_range extends Reefine_group {
+	public $type = 'number_range';
+	function __construct($reefine,$group_name) {
+		parent::__construct($reefine,$group_name);
+		$this->show_empty_filters=true;
+	}
+	
+	public function get_filter_value_from_post() {
+		$value_min = ee()->input->get_post($this->group_name.'_min');
+		$value_max = ee()->input->get_post($this->group_name.'_max');
+		$values = array();
+		if ($value_min!==false && $value_min!=='')
+			$values['min'] = $value_min;
+		if ($value_max!==false && $value_max!=='')
+			$values['max'] = $value_max;
+		return $values;
+	}
+	
+	public function do_redirect_for_text_input() {
+		$value_min = ee()->input->get_post($this->group_name.'_min');
+		$value_max = ee()->input->get_post($this->group_name.'_max');
+
+		if (($value_min !== false) || ($value_max !== false)) {
+			$value_range = array();
+			if ($value_min !== false && $value_min != '')
+				$value_range['min']=$value_min;
+			if ($value_max !== false && $value_max != '')
+				$value_range['max']=$value_max;
+			$url = $this->reefine->get_filter_url($this->group_name,$value_range,true);
+			ee()->functions->redirect($this->reefine->create_url($url));
+			return;
+		}
+	}
+	
+	
+	function set_filters() {
+		$filters= array();
+		
+		// get min/max ranges for number
+		// for each field in the filter group
+		foreach ($this->fields as &$field) {
+				
+			$sql = "SELECT count(distinct({$this->dbprefix}channel_data.entry_id)) as filter_quantity, " .
+			"min(CAST({$field->get_value_column()} AS DECIMAL(25,4))) as filter_min, " .
+			"max(CAST({$field->get_value_column()} AS DECIMAL(25,4))) as filter_max " .
+			"FROM {$this->dbprefix}channel_data ";
+			//if ($this->include_channel_titles)
+			$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
+			$sql .= $this->reefine->get_query_join_sql($this->group_name);
+			$sql .= "WHERE {$field->get_value_column()} <> '' ";
+			if (isset($this->reefine->channel_ids)) {
+				$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
+			}
+			// ignore the current filter group in creating the where clause
+			$where_clause_excluding_group = $this->reefine->get_filter_fields_where_clause($this->group_name);
+			if ($where_clause_excluding_group !='')
+				$sql .= "AND " . $where_clause_excluding_group;
+			$results = $this->db->query($sql)->result_array();
+			if (count($results)==0)
+				$filters[] = array(
+						'filter_value'=>'',
+						'filter_title'=>'',
+						'filter_min'=>'',
+						'filter_max'=>'',
+						'filter_quantity'=>0,
+						'group_name'=>$this->group_name);
+			else {
+				if (isset($this->values['min']) && isset($this->values['max']))
+					$results[0]['filter_value']=$this->values['min'] . ' - ' . $this->values['max'];
+				else if (isset($this->values['min']))
+					$results[0]['filter_value']='> ' . $this->values['min'];
+				else if (isset($this->values['max']))
+					$results[0]['filter_value']='< ' . $this->values['max'];
+				else
+					$results[0]['filter_value']='';
+				$results[0]['filter_title']=$results[0]['filter_value'];
+				//$results[0]['filter_value']=$results[0]['filter_min'].'-'.$results[0]['filter_max'];
+		
+				$results[0]['group_name']=$this->group_name;
+				// remove traling zeros on decimals
+				$results[0]['filter_min'] += 0;
+				$results[0]['filter_max'] += 0;
+				$filters[] = $results[0];
+			}
+		}
+	
+		// set totals for use in templates
+		$this->filters = $filters;
+		$this->total_filters = count($this->filters);
+		$this->active_filters = 0;
+		$this->matching_filters = 0;
+	
+		// set filter_active value if the filter is selected
+		foreach ($this->filters as &$filter) {
+			// make group name available in {filter} tag
+			$filter['group_name'] = $this->group_name;
+			if (isset($this->values) && count($this->values)>0) {
+				$filter['filter_active'] = true;
+				$this->active_filters += 1;
+			} else {
+				$filter['filter_active'] = false;
+			}
+			if ($filter['filter_quantity']>0)
+				$this->matching_filters += 1;
+		}
+		
+		
+	}
+	
+	
+	/**
+	 * for number_range set the filter_min_value and filter_max_value
+	 * @param unknown $filter_in
+	 * @param unknown $filter_out
+	 */
+	function format_filter_for_output($filter_in,&$filter_out) {
+		$filter_out['filter_min_value'] = isset($this->values['min']) ? $this->values['min'] : '';
+		$filter_out['filter_max_value'] = isset($this->values['max']) ? $this->values['max'] : '';
+	}
+	
+	/**
+	 * (non-PHPdoc)
+	 * @see Reefine_group::get_values_for_filter()
+	 */
+	public function get_values_for_filter($filter_value, $is_for_redirection) {
+		$values = array(); // clear out existing values
+		if ($is_for_redirection) {
+			if (isset($filter_value['min'])) $values['min']=$filter_value['min'];
+			if (isset($filter_value['max'])) $values['max']=$filter_value['max'];
+		}
+		return $values;
+	}
+	
+	/**
+	 * (non-PHPdoc)
+	 * @see Reefine_group::get_group_url_tag_replacement()
+	 */
+	public function get_group_url_tag_replacement($url_tag,$values) {
+	
+		$or_text = $url_tag['or_text'];
+		$any_text = $url_tag['any_text'];
+		$max_text = $url_tag['max_text'];
+		$min_text = $url_tag['min_text'];
+		
+		if (count($values)>0) {
+			if (isset($values['min']) && !isset($values['max']))
+				$url_value = $min_text.$values['min']; // at least x
+			else if (!isset($values['min']) && isset($values['max']))
+				$url_value = $max_text.$values['max']; // at most y
+			else if (isset($values['min']) && isset($values['max']))
+				$url_value = $values['min'].$or_text.$values['max']; // x to y
+			return $url_value;
+		} else {
+			return $any_text;
+		}
+	}
+	
+	/**
+	 * (non-PHPdoc)
+	 * @see Reefine_group::get_filter_querystring_from_filter_values()
+	 */
+	public function get_filter_querystring_from_filter_values($values) {
+		$qs = array();
+		if (count($values)>0) {
+			if (isset($values['min']))
+				$qs[] = urlencode($this->group_name) . '_min=' . urlencode($values['min']); // at least x
+			if (isset($values['max']))
+				$qs[] = urlencode($this->group_name) . '_max=' . urlencode($values['max']); // at least x
+		}
+		return $qs;
+	}
+	
+	
+	public function get_where_clause() {
+		$clauses = array();
+		if (isset($this->fields) && count($this->values)>0) {
+	
+			foreach ($this->fields as $field) {
+	
+				if (isset($this->values['min']) && is_numeric($this->values['min'])) {
+					$value = $this->db->escape_str($this->values['min']);
+					$clauses[] = "CAST({$field->get_value_column()} AS DECIMAL(25,4)) >= {$value}";
+				}
+				if (isset($this->values['max']) && is_numeric($this->values['max'])) {
+					$value = $this->db->escape_str($this->values['max']);
+					$clauses[] = "CAST({$field->get_value_column()} AS DECIMAL(25,4)) <= {$value}";
+				}
+			}
+		}
+		return $clauses;
+	}
+	
+	
+}
+
+class Reefine_group_search extends Reefine_group {
+	public $type = 'search';
+	function __construct($reefine,$group_name) {
+		parent::__construct($reefine,$group_name);
+		$this->show_empty_filters=true;
+	}
+	
+	
+	/**
+	 * Set the filters array. We dont need to get anything form the db for this unlike list groups
+	 */
+	function set_filters() {
+		// search has just the one filter
+		if (isset($this->values) && count($this->values)>0) {
+			$this->matching_filters = 1;
+			$this->active_filters = 1;
+			$this->filters = array(array(
+					'filter_value'=> $this->values[0],
+					'filter_title'=> $this->values[0],
+					'group_name' => $this->group_name,
+					'filter_quantity'=>1,
+					'filter_active'=>true));
+			
+		} else {
+			$this->matching_filters = 0;
+			$this->active_filters = 0;
+			$this->filters = array(array(
+					'filter_value'=> '',
+					'filter_title' => '',
+					'group_name' => $this->group_name,
+					'filter_quantity'=>0,
+					'filter_active'=>false));
+		}
+		
+		// set totals for use in templates
+		$this->total_filters = 1;
+	}
+	
+	/**
+	 * (non-PHPdoc)
+	 * @see Reefine_group::get_values_for_filter()
+	 */
+	public function get_values_for_filter($filter_value, $is_for_redirection) {
+
+		
+		if ($is_for_redirection) {
+			return array($filter_value);
+		} else {
+			// there can only be one search value no need to provide it in the url form post
+			return array();
+		}
+	}
+	
+	//
+	public function get_where_clause() {
+		$clauses = array();
+		if (isset($this->fields) && count($this->values)>0) {
+			$search_terms = array();
+			foreach (explode(' ',$this->values[0]) as $value) {
+				$words = array();
+				$value = $this->db->escape_like_str($value);
+				foreach ($this->fields as $field) {
+					$words[] = " {$field->get_title_column()} LIKE '%{$value}%'";
+				}
+				foreach ($this->category_group as $cat_group) {
+					$cat_group = $this->db->escape_str($cat_group);
+					$words[] = " ( cat_{$this->group_name}.cat_name LIKE '%{$value}%' AND cat_{$this->group_name}.group_id={$cat_group} )";
+				}
+	
+				$search_terms[] = '(' . implode(' OR ',$words) . ')';
+			}
+			$clauses[] = "\n(" . implode("\n AND ",$search_terms) . ")";
+		}
+	
+		return $clauses;
+	}
+	
+	
+	
 }

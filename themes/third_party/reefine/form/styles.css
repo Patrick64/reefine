@@ -13,14 +13,16 @@ position:relative;
 }
 
 .reefine .progress {
-	background: rgba(255,255,255,0.8) url(loading.gif) no-repeat center center;
+	animation: rotation 2s infinite linear;
+    -webkit-animation: rotation 2s infinite linear;
+	background: url(loading.png) no-repeat center center;
 	height:256px; width:256px;
 	margin:-128px 0 0 -128px;
 	border-radius:20px;
 	left:50%;
 	top:50%;
 	position:absolute;
-	opacity:0;
+	
 	z-index:10;
 	
 	display:none;
@@ -28,12 +30,43 @@ position:relative;
 
 .reefine.loading .progress {
 	display:block;
+}
+
+@-webkit-keyframes rotation {
+    from {-webkit-transform: rotate(0deg);}
+    to   {-webkit-transform: rotate(359deg);}
+}
+
+@keyframes rotation {
+    from {-webkit-transform: rotate(0deg);}
+    to   {-webkit-transform: rotate(359deg);}
+}
+
+
+.reefine {
 	opacity:1;
-	-webkit-transition: opacity 1s ease-in-out;
-	-moz-transition: opacity 1s ease-in-out;
-	-o-transition: opacity 1s ease-in-out;
-	-ms-transition: opacity 1s ease-in-out;
-	transition: opacity 1s ease-in-out;
+	-webkit-transition: opacity 0.2s ease-in-out;
+	-moz-transition: opacity 0.2s ease-in-out;
+	-o-transition: opacity 0.2s ease-in-out;
+	-ms-transition: opacity 0.2s ease-in-out;
+	transition: opacity 0.2s ease-in-out;
+}
+
+.reefine.loading {
+	/* IE 8 */
+  -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=60)";
+
+  /* IE 5-7 */
+  filter: alpha(opacity=60);
+
+  /* Netscape */
+  -moz-opacity: 0.6;
+
+  /* Safari 1.x */
+  -khtml-opacity: 0.6;
+
+  /* Good browsers */
+  opacity: 0.6;
 }
 
 .reefine a {

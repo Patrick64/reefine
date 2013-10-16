@@ -54,6 +54,7 @@
 
 	// http://stackoverflow.com/questions/6990729/simple-ajax-form-using-javascript-no-jquery
 	function AJAXPost(url, callback) {
+		var xmlhttp;
 		// set loading anim
 		container.className = container.className + " loading";
 		// code for IE7+, Firefox, Chrome,Opera,Safari

@@ -10,8 +10,7 @@
 		for (i = 0; i < allLinks.length; i = i + 1) {
 			if (/P\d+$/.test(allLinks[i].href)) {
 				allLinks[i].onclick = function() {
-					alert(params);
-					AJAXPost('reefine_form', this.href + '?' + params + "&ajax_request=1", ajax_success);
+					AJAXPost(this.href + '?' + params + "&ajax_request=1", ajax_success);
 					return false;
 				};
 			}
@@ -23,7 +22,7 @@
 			params = serialize(document.getElementById('reefine_form'));
 
 			var url = document.getElementById('reefine_form').action;
-			AJAXPost('reefine_form', url + '?' + params + "&ajax_request=1", ajax_success);
+			AJAXPost(url + '?' + params + "&ajax_request=1", ajax_success);
 			return false;
 		};
 	}
@@ -43,7 +42,8 @@
 	}
 
 	// http://stackoverflow.com/questions/6990729/simple-ajax-form-using-javascript-no-jquery
-	function AJAXPost(formId, url, callback) {
+	function AJAXPost(url, callback) {
+		var xmlhttp;
 		// set loading anim
 		container.className = container.className + " loading";
 		// code for IE7+, Firefox, Chrome,Opera,Safari
