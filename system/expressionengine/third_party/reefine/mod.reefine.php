@@ -133,7 +133,7 @@ class Reefine {
 
 
 			// to fix annoying bug where EE puts exp_ in the wrong places.
-			$this->db = clone $this->EE->db;
+			$this->db = $this->EE->db;
 			$this->dbprefix = $this->EE->db->dbprefix;
 			$this->db->dbprefix = '';
 
@@ -1030,9 +1030,7 @@ class Reefine {
 
 		// not found so cache them
 		$sql = "SELECT field_id, field_type, field_name, site_id, field_label, concat('field_id_',field_id) as field_column
-		FROM {$this->dbprefix}channel_fields
-		WHERE field_type != 'date'
-		AND field_type != 'rel'";
+		FROM {$this->dbprefix}channel_fields ";
 
 		$query = $this->db->query($sql);
 
@@ -1601,6 +1599,22 @@ class Reefine_group {
 		$this->db = $reefine->db;
 	} 
 	
+	/**
+	 * Get the value column of a field for SQL
+	 * @param Reefine_field $field
+	 */
+	protected function get_field_value_column($field) {
+		return $field->get_value_column();
+	}
+	
+	/**
+	 * Get the title column of a field for SQL
+	 * @param Reefine_field $field
+	 */
+	protected function get_field_title_column($field) {
+		return $field->get_title_column();
+	}
+	
 	public function add_filter_values($filter_values) {
 		if (isset($filter_values))
 			$this->values = array_merge($this->values, $filter_values);
@@ -1945,35 +1959,10 @@ class Reefine_group {
 		//abstract
 	}
 	
-}
-
-class Reefine_group_list extends Reefine_group {
-	public $type = 'list';
-	public function __construct($reefine,$group_name) {
-		parent::__construct($reefine,$group_name);
+	public function set_filters() {
+		// abstract
 	}
-	
-	function set_filters() {
-		$this->filters = array();
-		// for each field in the filter group
-		foreach ($this->fields as &$field) {
-			// get list of possible values
-			$results = $this->get_filter_groups_for_list($field->get_value_column(),$field->get_title_column());
-			$this->filters = array_merge($this->filters,$results);
-		}
-		if (count($this->category_group)>0) {
-			$results = $this->get_filter_groups_for_list("cat_{$this->group_name}.cat_url_title","cat_{$this->group_name}.cat_name",
-			"cat_{$this->group_name}.group_id IN {$this->cat_group_in_list}");
-			$this->filters = array_merge($this->filters,$results);
-		}
-		// remove duplicates http://stackoverflow.com/a/946300/1102000
-		$this->filters = array_map("unserialize", array_unique(array_map("serialize", $this->filters)));
-		// if group has delimiter
-		$delimiter = isset($this->delimiter) ? $this->delimiter : '';
-		if ($delimiter!='') {
-			$this->decompose_delimited_filters($delimiter);
-		}
-
+	protected function set_filter_totals() {
 		// set totals for use in templates
 		$this->total_filters = count($this->filters);
 		$this->active_filters = 0;
@@ -1992,29 +1981,65 @@ class Reefine_group_list extends Reefine_group {
 			if ($filter['filter_quantity']>0)
 				$this->matching_filters += 1;
 		}
+	}
+	
+}
+
+class Reefine_group_list extends Reefine_group {
+	public $type = 'list';
+	public function __construct($reefine,$group_name) {
+		parent::__construct($reefine,$group_name);
+	}
+	
+	function set_filters() {
+		$this->filters = array();
+		// for each field in the filter group
+		foreach ($this->fields as &$field) {
+			// get list of possible values
+			$results = $this->get_filter_groups_for_list($this->get_field_value_column($field),$this->get_field_title_column($field));
+			$this->filters = array_merge($this->filters,$results);
+		}
+		if (count($this->category_group)>0) {
+			$results = $this->get_filter_groups_for_list("cat_{$this->group_name}.cat_url_title","cat_{$this->group_name}.cat_name",
+			"cat_{$this->group_name}.group_id IN {$this->cat_group_in_list}");
+			$this->filters = array_merge($this->filters,$results);
+		}
+		// remove duplicates http://stackoverflow.com/a/946300/1102000
+		$this->filters = array_map("unserialize", array_unique(array_map("serialize", $this->filters)));
+		// if group has delimiter
+		$delimiter = isset($this->delimiter) ? $this->delimiter : '';
+		if ($delimiter!='') {
+			$this->decompose_delimited_filters($delimiter);
+		}
+
+		// set totals for use in templates
 		
+		$this->set_filter_totals();
 		// sort filters on orderby
 		$this->sort_filters();
 		
 		
 	}
 	
-	private function get_filter_groups_for_list($column_name,$title_column_name,$extra_clause = '') {
-		// have to give up on active record select coz of this bug: http://stackoverflow.com/questions/7927458/codeigniter-db-select-strange-behavior
+	protected function get_filter_count_statement() {
 		// if group is multi select then ignore the current filter group in creating the where clause
 		if ($this->join=='or' || $this->join=='none')
 			$count_where = $this->reefine->get_filter_fields_where_clause($this->group_name);
 		else // join is 'and' so use current filter
 			$count_where = $this->reefine->filter_where_clause;
-	
+		
 		if ($count_where == '') {
-			$sql_filter_count = "{$this->dbprefix}channel_data.entry_id"; //$this->db->select("count(field_id_{$field_id}) as filter_quantity", false);
+			return "{$this->dbprefix}channel_data.entry_id"; 
 		} else {
-			$sql_filter_count = "CASE WHEN {$count_where} THEN {$this->dbprefix}channel_data.entry_id ELSE NULL END as entry_id";
+			return "CASE WHEN {$count_where} THEN {$this->dbprefix}channel_data.entry_id ELSE NULL END as entry_id";
 		}
-	
+		
+	}
+	private function get_filter_groups_for_list($column_name,$title_column_name,$extra_clause = '') {
+		// have to give up on active record select coz of this bug: http://stackoverflow.com/questions/7927458/codeigniter-db-select-strange-behavior
+		
 		$sql = "SELECT {$column_name} as filter_value, " .
-		"{$title_column_name} as filter_title, {$sql_filter_count} " .
+		"{$title_column_name} as filter_title, {$this->get_filter_count_statement()} " .
 		"FROM {$this->dbprefix}channel_data ";
 			
 		//if ($this->include_channel_titles)
@@ -2082,7 +2107,7 @@ class Reefine_group_list extends Reefine_group {
 				$field_list = array();
 				foreach ($this->fields as $field) {
 					foreach ($in_list as $value) {
-						$field_list[] = " instr(concat({$delimiter},{$field->get_value_column()},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
+						$field_list[] = " instr(concat({$delimiter},{$this->get_field_value_column($field)},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
 					}
 				}
 				if (count($this->category_group)>0)
@@ -2094,7 +2119,7 @@ class Reefine_group_list extends Reefine_group {
 				foreach ($in_list as $value) {
 					$value_list = array();
 					foreach ($this->fields as $field) {
-						$value_list[] = " instr(concat({$delimiter},{$field->get_value_column()},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
+						$value_list[] = " instr(concat({$delimiter},{$this->get_field_value_column($field)},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
 					}
 	
 					if (count($this->category_group)>0)
@@ -2117,7 +2142,7 @@ class Reefine_group_list extends Reefine_group {
 				// OR  `field_id_12` IN ('Bosch','Green'))
 				$field_list = array();
 				foreach ($this->fields as $field) {
-					$field_list[] = " {$field->get_value_column()} IN (" . implode(',',$in_list) . ")";
+					$field_list[] = " {$this->get_field_value_column($field)} IN (" . implode(',',$in_list) . ")";
 				}
 				if (count($this->category_group)>0)
 					$field_list[] = " ( cat_{$this->group_name}.cat_url_title IN (" . implode(',',$in_list) . ") AND cat_{$this->group_name}.group_id IN {$this->cat_group_in_list})";
@@ -2172,16 +2197,10 @@ class Reefine_group_number_range extends Reefine_group {
 	}
 	
 	public function do_redirect_for_text_input() {
-		$value_min = ee()->input->get_post($this->group_name.'_min');
-		$value_max = ee()->input->get_post($this->group_name.'_max');
-
-		if (($value_min !== false) || ($value_max !== false)) {
-			$value_range = array();
-			if ($value_min !== false && $value_min != '')
-				$value_range['min']=$value_min;
-			if ($value_max !== false && $value_max != '')
-				$value_range['max']=$value_max;
-			$url = $this->reefine->get_filter_url($this->group_name,$value_range,true);
+		$values = $this->get_filter_value_from_post();
+		
+		if (count($values)>0) {
+			$url = $this->reefine->get_filter_url($this->group_name,$values,true);
 			ee()->functions->redirect($this->reefine->create_url($url));
 			return;
 		}
@@ -2196,13 +2215,13 @@ class Reefine_group_number_range extends Reefine_group {
 		foreach ($this->fields as &$field) {
 				
 			$sql = "SELECT count(distinct({$this->dbprefix}channel_data.entry_id)) as filter_quantity, " .
-			"min(CAST({$field->get_value_column()} AS DECIMAL(25,4))) as filter_min, " .
-			"max(CAST({$field->get_value_column()} AS DECIMAL(25,4))) as filter_max " .
+			"min(CAST({$this->get_field_value_column($field)} AS DECIMAL(25,4))) as filter_min, " .
+			"max(CAST({$this->get_field_value_column($field)} AS DECIMAL(25,4))) as filter_max " .
 			"FROM {$this->dbprefix}channel_data ";
 			//if ($this->include_channel_titles)
 			$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
 			$sql .= $this->reefine->get_query_join_sql($this->group_name);
-			$sql .= "WHERE {$field->get_value_column()} <> '' ";
+			$sql .= "WHERE {$this->get_field_value_column($field)} <> '' ";
 			if (isset($this->reefine->channel_ids)) {
 				$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
 			}
@@ -2334,11 +2353,11 @@ class Reefine_group_number_range extends Reefine_group {
 	
 				if (isset($this->values['min']) && is_numeric($this->values['min'])) {
 					$value = $this->db->escape_str($this->values['min']);
-					$clauses[] = "CAST({$field->get_value_column()} AS DECIMAL(25,4)) >= {$value}";
+					$clauses[] = "CAST({$this->get_field_value_column($field)} AS DECIMAL(25,4)) >= {$value}";
 				}
 				if (isset($this->values['max']) && is_numeric($this->values['max'])) {
 					$value = $this->db->escape_str($this->values['max']);
-					$clauses[] = "CAST({$field->get_value_column()} AS DECIMAL(25,4)) <= {$value}";
+					$clauses[] = "CAST({$this->get_field_value_column($field)} AS DECIMAL(25,4)) <= {$value}";
 				}
 			}
 		}
@@ -2410,7 +2429,7 @@ class Reefine_group_search extends Reefine_group {
 				$words = array();
 				$value = $this->db->escape_like_str($value);
 				foreach ($this->fields as $field) {
-					$words[] = " {$field->get_title_column()} LIKE '%{$value}%'";
+					$words[] = " {$this->get_field_title_column($field)} LIKE '%{$value}%'";
 				}
 				foreach ($this->category_group as $cat_group) {
 					$cat_group = $this->db->escape_str($cat_group);
@@ -2424,7 +2443,130 @@ class Reefine_group_search extends Reefine_group {
 	
 		return $clauses;
 	}
+		
+}
+
+
+
+class Reefine_group_month_list extends Reefine_group_list {
+	public $type = 'list';
+	function __construct($reefine,$group_name) {
+		parent::__construct($reefine,$group_name);
+	}
+
 	
+
+	function set_filters() {
+		$filters= array();
+		$min_field = $this->fields[0];
+		// if two fields are specified then use a min-max range otherwise min-max are the same.
+		if (count($this->fields)>1)
+			$max_field=$this->fields[1];
+		else 
+			$min_field = $this->fields[0];
+		// get min/max ranges for number
+		// for each field in the filter group
+		
+		// http://stackoverflow.com/a/11808253/1102000
+		// get list of date ranges of the first of the month with how mant matches there are
+		
+		$sql = "SELECT {$this->get_filter_count_statement()}, " .
+		"{$this->get_field_value_column($min_field)} as filter_min, " .
+		"{$this->get_field_value_column($max_field)} as filter_max " .
+		"FROM {$this->dbprefix}channel_data ";
+		//if ($this->include_channel_titles)
+		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
+		$sql .= $this->reefine->get_query_join_sql($this->group_name);
+		$sql .= "WHERE 1=1 ";
+		if (isset($this->reefine->channel_ids)) {
+			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
+		}
+		// ignore the current filter group in creating the where clause
+		$where_clause_excluding_group = $this->reefine->get_filter_fields_where_clause($this->group_name);
+		if ($where_clause_excluding_group !='')
+			$sql .= "AND " . $where_clause_excluding_group;
+		// Wrap sql statement in select statement so we can get total of each distinct entry
+		$sql = "SELECT filter_min, filter_max, count(distinct(entry_id)) as filter_quantity ".
+				" FROM ({$sql}) t1 GROUP BY filter_min, filter_max";
+		
+		$results = $this->db->query($sql)->result_array();
+		$this->filters=array();
+		foreach ($results  as $row) {
+			// ignore filters with no min value
+			if ($row['filter_min'] != '1970-01-01') {
+				$filter_min_date = new DateTime($row['filter_min']);
+				if ($row['filter_max'] == '1970-01-01') {
+					$filter_max_date = $filter_min_date;
+				} else {
+					$filter_max_date = new DateTime($row['filter_max']);
+				}
+				// for every month from min date to max date
+				for ($current = clone $filter_min_date; $filter_max_date>=$current; $current->add(new DateInterval('P1M'))) {
+					// add in a filter for the month and/or increase the filter_quantity by the number from database
+					if (!isset($this->filters[$current->format('Y-m-d')])) {
+						$this->filters[$current->format('Y-m-d')] = array(
+							'filter_value' => $current->format('Y-m-d'),
+							'filter_title' => $current->format('F Y'),
+							'filter_quantity' => $row['filter_quantity']
+						);
+					} else {
+						$this->filters[$current->format('Y-m-d')]['filter_quantity'] += $row['filter_quantity'];
+					}
+				}
+			}
+		}
+		
+		//die();
+		
+		
+		$this->set_filter_totals();
+		// sort filters on orderby
+		$this->sort_filters();
+		
+		
+	}
 	
+	// construct the where clause for a group of type "list"
+	public function get_where_clause() {
+		$clauses = array();
+
+		// a filter group can have many fields so go through each
+		$in_list = array();
+		// make a list of possible values for the field
+		foreach ($this->values as $value) {
+			$in_list[] = $this->db->escape($value);
+		}
+
+		$field_list = array();
+		foreach ($in_list as $value) {
+				
+			$month_value = "DATE_ADD(LAST_DAY(DATE_SUB(DATE({$value}), interval 30 day)), interval 1 day)";
+			$min_column = $this->get_field_value_column($this->fields[0]);
+			$statement = "{$min_column} = {$month_value}";
+				
+			if (count($this->fields)>1) {
+				$max_column = $this->get_field_value_column($this->fields[1]);
+				$statement = "( {$statement} OR ({$this->fields[1]->get_value_column()}<>'' " .
+				" AND {$month_value} between {$min_column} AND {$max_column} ) )";
+			}
+
+			$field_list[] = $statement;
+		}
+		if ($this->join=='or' || $this->join=='none') {
+			$clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
+		} else {
+			$clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
+		}
+
+		return $clauses;
+	}
 	
+	/**
+	 * (non-PHPdoc)
+	 * @see Reefine_group::get_field_value_column()
+	 */
+	protected function get_field_value_column($field) {
+		return "DATE_ADD(LAST_DAY(DATE_SUB(from_unixtime({$field->get_value_column()}), interval 30 day)), interval 1 day)";
+	}
+
 }
