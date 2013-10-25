@@ -84,6 +84,8 @@ class Reefine {
 	 * @var unknown
 	 */
 	var $url_suffix = '';
+	
+	var $disable_search = false;
 	/**
 	 * @var array default settings for group if not otherwise specified
 	 */
@@ -113,6 +115,11 @@ class Reefine {
 					'join'=>'none',
 					'delimiter'=>'',
 					'label'=>'Search'
+			),
+			'date' => array(
+					'type'=>'month_list',
+					'join'=>'none',
+					'delimiter'=>''
 			),
 
 	);
@@ -150,20 +157,22 @@ class Reefine {
 
 			$this->theme = $this->get_theme($this->theme_name);
 
-
-
 			$this->filter_values = $this->get_filter_values();
 
+			if (!$this->disable_search) {
+				// get current search details
+				$this->add_filter_values($this->filter_values);
+			}
+			
 			//
-			// get current search details
-			$this->add_filter_values($this->filter_values);
+
 			//get a unique id of this particular search.
 			$this->filter_id = md5(serialize($this->filter_groups));
 
 			
 			// change expressione ngin uri so paging works
 			if ($this->method=='url') {
-				$this->do_redirects_for_text_inputs();
+				if (!$this->disable_search) $this->do_redirects_for_text_inputs();
 				$this->change_uri_for_paging();
 			}
 
@@ -327,6 +336,7 @@ class Reefine {
 		$filter_channel = $this->EE->TMPL->fetch_param('channel', '');
 		$this->site = $this->EE->TMPL->fetch_param('site', $this->EE->config->item('site_id'));
 		$this->status = $this->EE->TMPL->fetch_param('status', $this->EE->config->item('open'));
+		$this->disable_search = $this->EE->TMPL->fetch_param('disable_search', $this->EE->config->item('disable_search'));
 		// methods: url,post,javascript,ajax,
 		$this->method = $this->EE->TMPL->fetch_param('method', 'url');
 		$this->url_tag = $this->EE->TMPL->fetch_param('url', '');
@@ -1031,7 +1041,7 @@ class Reefine {
 		}
 
 		// not found so cache them
-		$sql = "SELECT field_id, field_type, field_name, site_id, field_label, concat('field_id_',field_id) as field_column
+		$sql = "SELECT field_id, field_type, field_name, site_id, field_label, concat('field_id_',field_id) as field_column, 0 as is_title_field
 		FROM {$this->dbprefix}channel_fields ";
 
 		$query = $this->db->query($sql);
@@ -1044,13 +1054,9 @@ class Reefine {
 				$this->_custom_fields[$row['site_id']][$row['field_name']] = $row;
 			}
 			foreach ($this->_custom_fields as $site_id => $field) {
-				$this->_custom_fields[$site_id]['title'] = array(
-						'field_type' => 'text',
-						'field_name' => 'title',
-						'site_id' => $site_id,
-						'field_label' => 'title',
-						'field_column' => 'title'
-				);
+				$this->_custom_fields[$site_id]['title'] = array('field_type' => 'text','field_name' => 'title','site_id' => $site_id, 'field_label' => 'title', 'field_column' => 'title',  'is_title_field' => 1 );
+				$this->_custom_fields[$site_id]['entry_date'] = array('field_type' => 'date','field_name' => 'entry_date','site_id' => $site_id, 'field_label' => 'Entry Date', 'field_column' => 'entry_date',  'is_title_field' => 1);
+				$this->_custom_fields[$site_id]['expiration_date'] = array('field_type' => 'date','field_name' => 'expiration_date','site_id' => $site_id, 'field_label' => 'Expiration Date', 'field_column' => 'expiration_date',  'is_title_field' => 1);
 			}
 			$this->EE->session->cache[$this->class_name]['custom_channel_fields'] = $this->_custom_fields;
 			return true;
@@ -1258,8 +1264,8 @@ class Reefine_field {
 	}
 	
 	function get_value_column() {
-		if ($this->field_name=='title')
-			return $this->channel_titles_alias . '.title';
+		if ($this->get_field_by_key($this->field_name,'is_title_field'))
+			return $this->channel_titles_alias  . '.' . $this->get_field_by_key($this->field_name,'field_column');
 		else
 			return $this->channel_data_alias . '.' . $this->get_field_by_key($this->field_name,'field_column');
 	}
@@ -1406,9 +1412,9 @@ class Reefine_field_relationship extends Reefine_field {
 		if ($this->child_field_name=='')
 			// Return url_title so we get a nice url for list filters
 			return "{$this->table_alias_titles}.url_title";
-		else if ($this->child_field_name=='title')
+		else if ($this->get_field_by_key($this->child_field_name,'is_title_field'))
 			// return full title, good for search filters
-			return "{$this->table_alias_titles}.title";
+			return "{$this->table_alias_titles}." . $this->get_field_by_key($this->child_field_name,'field_column');
 		else
 			// return column data
 			return "{$this->table_alias_data}." . $this->get_field_by_key($this->child_field_name,'field_column');
@@ -2502,7 +2508,7 @@ class Reefine_group_month_list extends Reefine_group_list {
 	public function set_settings_from_parameters() {
 		parent::set_settings_from_parameters();
 		// add rest of settings which are strings/arrays/booleans
-		$this->reefine->add_filter_group_setting($this, 'where_after', time());
+		$this->reefine->add_filter_group_setting($this, 'where_after', '');
 		$this->reefine->add_filter_group_setting($this, 'where_before', '');
 	}
 	
@@ -2513,7 +2519,7 @@ class Reefine_group_month_list extends Reefine_group_list {
 		if (count($this->fields)>1)
 			$max_column = "cast({$this->fields[1]->get_value_column()} as UNSIGNED)";
 		else
-			$max_column = $min_field;
+			$max_column = $min_column;
 		$sql = array();
 		if (!empty($this->where_before) && is_numeric($this->where_before))
 			$sql[] = "{$min_column} < {$this->db->escape($this->where_before)}";
