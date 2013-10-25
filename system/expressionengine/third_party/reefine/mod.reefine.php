@@ -352,6 +352,16 @@ class Reefine {
 		if (count($this->EE->TMPL->search_fields)>0) {
 			$this->search_field_where_clause = $this->get_search_field_where_clause($this->EE->TMPL->search_fields);
 		}
+		
+		// get where cluses from filter groups
+		foreach ($this->filter_groups as $group) {
+			$group_where = $group->get_global_where_clause();
+			if (!empty($group_where)) {
+				if ($this->search_field_where_clause!='') $this->search_field_where_clause .= ' AND ';
+				$this->search_field_where_clause .= $group_where;
+			}
+		}
+		
 
 		// category_url parameter limits results to just the the category_url
 		if (!empty($this->EE->TMPL->tagparams['category_url'])) {
@@ -372,24 +382,8 @@ class Reefine {
 	private function add_all_filter_group_settings() {
 		/* @var $group Reefine_group */
 		foreach ($this->filter_groups as $group_name => &$group) {
-
-			// get all field names in param
-			$field_names = $this->get_filter_group_setting($group_name, 'fields', array(), 'array');
-			foreach ($field_names as $field_name) {
-				$group->fields[] = $this->get_field_obj($field_name);
-			}
-			// add rest of settings which are strings/arrays/booleans
-			$this->add_filter_group_setting($group, 'label', $group_name);
-			$this->add_filter_group_setting($group, 'delimiter', '');
-			$this->add_filter_group_setting($group, 'join', 'or', 'text');
-			$this->add_filter_group_setting($group, 'orderby', 'value', 'text');
-			$this->add_filter_group_setting($group, 'category_group', array(), 'array');
-			$this->add_filter_group_setting($group, 'show_empty_filters', false, 'bool');
+			$group->set_settings_from_parameters();
 			
-			if (count($group->category_group)>0) {
-				$group->cat_group_in_list = $this->array_to_in_list($group->category_group);
-			}
-
 
 		}
 	}
@@ -403,7 +397,7 @@ class Reefine {
 	* @param unknown_type $default default value
 	* @param unknown_type $type data type: array, bool or text
 	*/
-	private function add_filter_group_setting($group, $key, $default, $type = 'text' ) {
+	public function add_filter_group_setting($group, $key, $default, $type = 'text' ) {
 		// if the filter group already contains a value for this key then this is the new default.
 		// this would be set from get_field_filters_from_parameters function
 		if (!empty($group->$key) && $group->$key!='') {
@@ -420,7 +414,7 @@ class Reefine {
 	 * @param string $type
 	 * @return Ambigous <unknown, boolean, multitype:>
 	 */
-	private function get_filter_group_setting($group_name, $key, $default, $type = 'text') {
+	public function get_filter_group_setting($group_name, $key, $default, $type = 'text') {
 		$tag = 'filter:' . $group_name . ':' . $key;
 		if (!isset($this->EE->TMPL->tagparams[$tag])) {
 			$result = $default;
@@ -586,7 +580,7 @@ class Reefine {
 		}
 	}
 
-	private function array_to_in_list($in_list) {
+	public function array_to_in_list($in_list) {
 		$result = '';
 		if (count($in_list)==0)
 			return '(null)';
@@ -711,6 +705,7 @@ class Reefine {
 				}
 			}
 		}
+		
 		$sql = preg_replace('/^\s*AND/','',$sql);
 		return $sql;
 	}
@@ -1599,6 +1594,27 @@ class Reefine_group {
 		$this->db = $reefine->db;
 	} 
 	
+	
+	public function set_settings_from_parameters() {
+		// get all field names in param
+		$field_names = $this->reefine->get_filter_group_setting($this->group_name, 'fields', array(), 'array');
+		foreach ($field_names as $field_name) {
+			$this->fields[] = $this->reefine->get_field_obj($field_name);
+		}
+		// add rest of settings which are strings/arrays/booleans
+		$this->reefine->add_filter_group_setting($this, 'label', $this->group_name);
+		$this->reefine->add_filter_group_setting($this, 'delimiter', '');
+		$this->reefine->add_filter_group_setting($this, 'join', 'or', 'text');
+		$this->reefine->add_filter_group_setting($this, 'orderby', 'value', 'text');
+		$this->reefine->add_filter_group_setting($this, 'category_group', array(), 'array');
+		$this->reefine->add_filter_group_setting($this, 'show_empty_filters', false, 'bool');
+			
+		if (count($this->category_group)>0) {
+			$this->cat_group_in_list = $this->reefine->array_to_in_list($this->category_group);
+		}
+	}
+	
+	
 	/**
 	 * Get the value column of a field for SQL
 	 * @param Reefine_field $field
@@ -1613,6 +1629,11 @@ class Reefine_group {
 	 */
 	protected function get_field_title_column($field) {
 		return $field->get_title_column();
+	}
+	
+	// global where clause that effects entire search, not just the filter
+	public function get_global_where_clause() {
+		return '';
 	}
 	
 	public function add_filter_values($filter_values) {
@@ -2450,20 +2471,67 @@ class Reefine_group_search extends Reefine_group {
 
 class Reefine_group_month_list extends Reefine_group_list {
 	public $type = 'list';
+	public $where_after;
+	public $where_before;
 	function __construct($reefine,$group_name) {
 		parent::__construct($reefine,$group_name);
 	}
 
+	/**
+	 * (non-PHPdoc)
+	 * @see Reefine_group::set_settings_from_parameters()
+	 */
+	public function set_settings_from_parameters() {
+		parent::set_settings_from_parameters();
+		// add rest of settings which are strings/arrays/booleans
+		$this->reefine->add_filter_group_setting($this, 'where_after', time());
+		$this->reefine->add_filter_group_setting($this, 'where_before', '');
+	}
+	
+	public function get_global_where_clause() {
+		/** @var $min_field Reefine_field */
+		$min_column = "cast({$this->fields[0]->get_value_column()} as UNSIGNED)";
+		// if two fields are specified then use a min-max range otherwise min-max are the same.
+		if (count($this->fields)>1)
+			$max_column = "cast({$this->fields[1]->get_value_column()} as UNSIGNED)";
+		else
+			$max_column = $min_field;
+		$sql = array();
+		if (!empty($this->where_before) && is_numeric($this->where_before))
+			$sql[] = "{$min_column} < {$this->db->escape($this->where_before)}";
+		if (!empty($this->where_after) && is_numeric($this->where_after))
+			$sql[] = "greatest({$min_column},{$max_column}) > cast({$this->db->escape($this->where_after)} as UNSIGNED)";
+		
+		if (count($sql)>0)
+			return implode(' AND ',$sql);
+		else 
+			return '';
+		
+	}
 	
 
 	function set_filters() {
+		
+		if ($this->where_before!='') {
+			$before_date = new DateTime();
+			$before_date->setTimestamp($this->where_before);
+			$before_date->modify('+1 month'); 
+		}
+		
+		if ($this->where_after!='') {
+			$after_date = new DateTime();
+			$after_date->setTimestamp($this->where_after);
+			$after_date->modify('-1 month');
+		}
+		
+		
 		$filters= array();
 		$min_field = $this->fields[0];
 		// if two fields are specified then use a min-max range otherwise min-max are the same.
 		if (count($this->fields)>1)
 			$max_field=$this->fields[1];
 		else 
-			$min_field = $this->fields[0];
+			$max_field = $this->fields[0];
 		// get min/max ranges for number
 		// for each field in the filter group
 		
@@ -2500,17 +2568,22 @@ class Reefine_group_month_list extends Reefine_group_list {
 				} else {
 					$filter_max_date = new DateTime($row['filter_max']);
 				}
+
+				
 				// for every month from min date to max date
 				for ($current = clone $filter_min_date; $filter_max_date>=$current; $current->add(new DateInterval('P1M'))) {
-					// add in a filter for the month and/or increase the filter_quantity by the number from database
-					if (!isset($this->filters[$current->format('Y-m-d')])) {
-						$this->filters[$current->format('Y-m-d')] = array(
-							'filter_value' => $current->format('Y-m-d'),
-							'filter_title' => $current->format('F Y'),
-							'filter_quantity' => $row['filter_quantity']
-						);
-					} else {
-						$this->filters[$current->format('Y-m-d')]['filter_quantity'] += $row['filter_quantity'];
+					// if the current month is within the date range given in parameters
+					if ((!isset($after_date) || $current>$after_date) && (!isset($before_date) || $current<$before_date)) {
+						// add in a filter for the month and/or increase the filter_quantity by the number from database
+						if (!isset($this->filters[$current->format('Y-m-d')])) {
+							$this->filters[$current->format('Y-m-d')] = array(
+								'filter_value' => $current->format('Y-m-d'),
+								'filter_title' => $current->format('F Y'),
+								'filter_quantity' => $row['filter_quantity']
+							);
+						} else {
+							$this->filters[$current->format('Y-m-d')]['filter_quantity'] += $row['filter_quantity'];
+						}
 					}
 				}
 			}
@@ -2557,7 +2630,7 @@ class Reefine_group_month_list extends Reefine_group_list {
 		} else {
 			$clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
 		}
-
+		
 		return $clauses;
 	}
 	
