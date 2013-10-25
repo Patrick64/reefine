@@ -203,7 +203,11 @@ class Reefine {
 		// check for any post/get values that may be submitted by form and redirect
 		// so that the url is correct.
 		foreach ($this->filter_groups as $group_name => $group) {
-			$group->do_redirect_for_text_input();
+			//$group->do_redirect_for_text_input();
+			if ($group->post_contains_filter_value()) {
+				$url = $this->get_filter_url();
+				ee()->functions->redirect($this->create_url($url));
+			}
 		}
 	}
 	
@@ -242,6 +246,7 @@ class Reefine {
 	}
 	
 	private function  get_filter_values() {
+		$filter_values = array();
 		// if the search will be done via the URL then parse through it to get the filter values
 		if ($this->method=='url') {
 			// if freebie is being used then get the page url before freebie has messed about with it
@@ -257,17 +262,19 @@ class Reefine {
 				$this->url_suffix = $matches[0];
 				$this->url = preg_replace('/\/P(\d+)$/', '', $this->url);
 			}
-			return $this->parse_search_url($this->url_tag,$this->url);
+			$filter_values = $this->parse_search_url($this->url_tag,$this->url);
 		
-		} else if ($this->method=='post' || $this->method=='ajax' || $this->method=='get') {
-			if ($this->EE->input->get_post('ajax_request'))
-				$this->is_ajax_request=true;
-			$filter_values = array();
-			foreach ($this->filter_groups as $group_name => &$group) {
+		} 
+		if ($this->EE->input->get_post('ajax_request'))
+			$this->is_ajax_request=true;
+		// get filter values from post/get for ajax/post/get method
+		// also if using URL method then we want to set the value for redirecting
+		foreach ($this->filter_groups as $group_name => &$group) {
+			if ($group->post_contains_filter_value()) {
 				$filter_values[$group_name] = $group->get_filter_value_from_post();
 			}
-			return $filter_values;
 		}
+		return $filter_values;
 	}
 
 	private function get_theme($theme_name) {
@@ -1655,13 +1662,18 @@ class Reefine_group {
 		$value = ee()->input->get_post($this->group_name);
 		
 		if ($value !== false) {
-			$url = $this->reefine->get_filter_url($group_name,$value,true);
+			$url = $this->reefine->get_filter_url($this->group_name,$value,true);
 			ee()->functions->redirect($this->reefine->create_url($url));
 			return;
 		}
 		
 	}
 	
+	
+	public function post_contains_filter_value() {
+		$value = ee()->input->get_post($this->group_name);
+		return ($value!==false);
+	}
 	
 	public function get_filter_value_from_post() {
 		$value = ee()->input->get_post($this->group_name);
@@ -2206,6 +2218,12 @@ class Reefine_group_number_range extends Reefine_group {
 		$this->show_empty_filters=true;
 	}
 	
+	public function post_contains_filter_value() {
+		$value_min = ee()->input->get_post($this->group_name.'_min');
+		$value_max = ee()->input->get_post($this->group_name.'_max');
+		return ($value_min!==false || $value_max!==false);
+	}
+	
 	public function get_filter_value_from_post() {
 		$value_min = ee()->input->get_post($this->group_name.'_min');
 		$value_max = ee()->input->get_post($this->group_name.'_max');
@@ -2513,14 +2531,12 @@ class Reefine_group_month_list extends Reefine_group_list {
 	function set_filters() {
 		
 		if ($this->where_before!='') {
-			$before_date = new DateTime();
-			$before_date->setTimestamp($this->where_before);
+			$before_date = new DateTime("@" . $this->where_before);
 			$before_date->modify('+1 month'); 
 		}
 		
 		if ($this->where_after!='') {
-			$after_date = new DateTime();
-			$after_date->setTimestamp($this->where_after);
+			$after_date = new DateTime("@" . $this->where_after);
 			$after_date->modify('-1 month');
 		}
 		
@@ -2571,7 +2587,7 @@ class Reefine_group_month_list extends Reefine_group_list {
 
 				
 				// for every month from min date to max date
-				for ($current = clone $filter_min_date; $filter_max_date>=$current; $current->add(new DateInterval('P1M'))) {
+				for ($current = clone $filter_min_date; $filter_max_date>=$current; $current->modify('+1 month')) {
 					// if the current month is within the date range given in parameters
 					if ((!isset($after_date) || $current>$after_date) && (!isset($before_date) || $current<$before_date)) {
 						// add in a filter for the month and/or increase the filter_quantity by the number from database
