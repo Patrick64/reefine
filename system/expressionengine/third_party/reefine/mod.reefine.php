@@ -1904,7 +1904,12 @@ class Reefine_group {
 
 	static function compare_filter_by_value($a, $b)
 	{
-		return (strcmp($a['filter_value'], $b['filter_value'])>0) ? 1 : -1;
+		if (is_numeric($a['filter_value']) && is_numeric($b['filter_value'])) {		
+			return ((floatval($a['filter_value'])>floatval($b['filter_value'])) ? 1 : -1);
+		} else {
+			return (strcmp($a['filter_value'], $b['filter_value'])>0) ? 1 : -1;
+		}
+
 	}
 	
 	static function compare_filter_by_count($a, $b){
