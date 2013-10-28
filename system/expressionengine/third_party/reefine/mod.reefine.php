@@ -189,6 +189,9 @@ class Reefine {
 			
 			$tag_array = $this->get_tag_data_result($this->entry_id_list );
 			
+			// set db prefix back
+			$this->EE->db->dbprefix = $this->dbprefix;
+			
 			if ($this->method=='ajax' && $this->is_ajax_request) {
 				$ajax_output = $this->parse_final_template($this->tagdata,$tag_array);
 				$this->EE->output->send_ajax_response($ajax_output);
@@ -233,7 +236,7 @@ class Reefine {
 		$result = $this->EE->db->select('snippet_name, snippet_contents')
 		->where('site_id', $this->site)
 		->or_where('site_id', 0)
-		->get('snippets')->result_array();
+		->get("snippets")->result_array();
 		
 		$snippets = array();
 		foreach ($result as $row) {
