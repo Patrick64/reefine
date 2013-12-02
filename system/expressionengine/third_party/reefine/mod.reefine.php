@@ -1880,7 +1880,7 @@ class Reefine_group {
 		foreach ($this->filters as $key => &$filter) {
 			// see if it has a delimiter first
 			if (strpos($filter['filter_value'],$delimiter)!==false) {
-				// remove this filter as it's a compound one
+				// remove this filter as it has a delimiter in it which we've already split out
 				unset($this->filters[$key]);
 				//array_splice($filters,$key,1);
 				$reorder_required=true;
@@ -1890,6 +1890,28 @@ class Reefine_group {
 			$this->filters = array_values($this->filters);
 	
 	
+	}
+	
+	/**
+	 * Combine any duplicate $this->filters
+	 */
+	protected function combine_duplicate_filters() {
+		$reorder_required=false;
+		$unique_filter_keys = array();
+		foreach ($this->filters as $key=>&$filter) {
+			$filter_value=$filter['filter_value'];
+			// if is duplicate
+			if (isset($unique_filter_keys[$filter_value])) {
+				// add filter quantntiy of duplicate filter to the first one
+				$this->filters[$unique_filter_keys[$filter_value]]['filter_quantity']+=$filter['filter_quantity'];
+				unset($this->filters[$key]); // remove duplicate
+				$reorder_required = true; // unset leaves a hole in the array so it needs reordering
+			} else {
+				$unique_filter_keys[$filter['filter_value']] = $key;
+			}
+		}
+		if ($reorder_required)
+			$this->filters = array_values($this->filters);
 	}
 	
 	private function get_filter_indexes() {
@@ -2045,6 +2067,7 @@ class Reefine_group_list extends Reefine_group {
 			// get list of possible values
 			$results = $this->get_filter_groups_for_list($this->get_field_value_column($field),$this->get_field_title_column($field));
 			$this->filters = array_merge($this->filters,$results);
+			
 		}
 		if (count($this->category_group)>0) {
 			$results = $this->get_filter_groups_for_list("cat_{$this->group_name}.cat_url_title","cat_{$this->group_name}.cat_name",
@@ -2052,13 +2075,14 @@ class Reefine_group_list extends Reefine_group {
 			$this->filters = array_merge($this->filters,$results);
 		}
 		// remove duplicates http://stackoverflow.com/a/946300/1102000
-		$this->filters = array_map("unserialize", array_unique(array_map("serialize", $this->filters)));
+		//$this->filters = array_map("unserialize", array_unique(array_map("serialize", $this->filters)));
+		$this->combine_duplicate_filters();
 		// if group has delimiter
 		$delimiter = isset($this->delimiter) ? $this->delimiter : '';
 		if ($delimiter!='') {
 			$this->decompose_delimited_filters($delimiter);
 		}
-
+		
 		// set totals for use in templates
 		
 		$this->set_filter_totals();

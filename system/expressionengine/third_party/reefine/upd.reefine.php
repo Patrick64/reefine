@@ -2,7 +2,7 @@
 
 class Reefine_upd {
 
-    var $version        = '1.3.2';
+    var $version        = '1.4.0';
 
     function Reefine_upd()
     {
