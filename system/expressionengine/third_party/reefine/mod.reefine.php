@@ -80,6 +80,12 @@ class Reefine {
 	 */
 	public $is_ajax_request = false;
 	/**
+	 * This is a hidden field that is submitted with the form. This way we know it is a full form post even if there are no other values present
+	 * as in the case of using just tickboxes there is no other way to know if the form has been submitted or not if none have been ticked.
+	 * @var boolean
+	 */
+	public $is_form_post = false;
+	/**
 	 * String to append to url that isnt related to Reefine. Will be the page offset eg "/P6"
 	 * @var unknown
 	 */
@@ -279,10 +285,14 @@ class Reefine {
 		} 
 		if ($this->EE->input->get_post('ajax_request'))
 			$this->is_ajax_request=true;
+		if ($this->EE->input->get_post('form_post'))
+			$this->is_form_post=true;
+		
 		// get filter values from post/get for ajax/post/get method
 		// also if using URL method then we want to set the value for redirecting
 		foreach ($this->filter_groups as $group_name => &$group) {
-			if ($group->post_contains_filter_value()) {
+			if ($group->post_contains_filter_value() || $this->is_form_post) {
+				
 				$filter_values[$group_name] = $group->get_filter_value_from_post();
 			}
 		}
@@ -340,7 +350,7 @@ class Reefine {
 		$this->site = $this->EE->TMPL->fetch_param('site', $this->EE->config->item('site_id'));
 		$this->status = $this->EE->TMPL->fetch_param('status', $this->EE->config->item('open'));
 		$this->disable_search = $this->EE->TMPL->fetch_param('disable_search', $this->EE->config->item('disable_search'));
-		// methods: url,post,javascript,ajax,
+		// methods: url,post,get,ajax,
 		$this->method = $this->EE->TMPL->fetch_param('method', 'url');
 		$this->url_tag = $this->EE->TMPL->fetch_param('url', '');
 		$this->theme_name = $this->EE->TMPL->fetch_param('theme', '');
@@ -785,7 +795,11 @@ class Reefine {
 				// if a tag value has been set
 				if (isset($tag_values[0][$tag_value_index])) {
 					$tag_value = $tag_values[0][$tag_value_index];
-					$filter_values[$group->group_name] = $group->get_filter_values_from_url($tag_value,$url_tag);
+					$filter_value = $group->get_filter_values_from_url($tag_value,$url_tag);
+					// if the filter is "any" then it won't return anything  
+					if (isset($filter_value)) {
+						$filter_values[$group->group_name] = $filter_value;
+					}
 				}
 				
 			}
