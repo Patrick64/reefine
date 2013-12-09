@@ -1245,6 +1245,7 @@ class Reefine_field {
 	 */
 	protected $ee_field_name = '';
 	protected $field_label = '';
+	protected $ee_field_info;
 	protected $ee_type = '';
 	/**
 	 * Reefine object
@@ -1293,6 +1294,7 @@ class Reefine_field {
 			$this->field_label = $ee_field['field_label'];
 			$this->ee_type= $ee_field['field_type'];
 			$this->db_column = $ee_field['field_column'];
+			$this->ee_field_info = $ee_field;
 		}
 	}
 	function get_field_by_name($field_name) {
@@ -1521,6 +1523,168 @@ class Reefine_field_playa extends Reefine_field {
 		return $this->get_field_by_name($this->parent_field_name);
 	}
 }
+
+class Reefine_field_grid extends Reefine_field {
+
+	private $relation_field_id;
+
+	private $child_field_name;
+	private $parent_field_name;
+	private $table_alias;
+	private $table_alias_titles;
+	private $table_alias_data;
+	
+	private $grid_field;
+
+	function __construct($reefine,$field_name,$parent_field_name,$child_field_name) {
+		parent::__construct($reefine, $parent_field_name);
+
+		$this->reefine = $reefine;
+		$this->parent_field_name = $parent_field_name;
+		$this->child_field_name=$child_field_name;
+		
+		$grid_fields = Reefine_util_grid_fields::get_instance($reefine);
+		
+		$this->grid_field = $grid_fields->get_grid_field($this->ee_field_info['field_id'],$child_field_name); 
+		
+		$this->table_alias = 'grid_' . $this->grid_field['field_id']; //preg_replace('/[^A-Z0-9]/i','_',$this->relation_field_id);
+
+	}
+
+	function get_value_column() {
+		return "{$this->table_alias}.col_id_{$this->grid_field['col_id']}"; // . $this->get_field_by_key($this->child_field_name,'field_column');
+	}
+
+	function get_title_column() {
+		return $this->get_value_column();
+	}
+
+	function get_join_sql() {
+		// join the channel_grid_field_... table
+		$joins=array("LEFT OUTER JOIN {$this->reefine->dbprefix}channel_grid_field_31 {$this->table_alias} " .
+		"ON {$this->table_alias}.entry_id = {$this->channel_data_alias}.entry_id ");
+		
+		return $joins;
+	}
+}
+
+class Reefine_util_grid_fields {
+	private static $instance;
+	/**
+	 * @var Reefine
+	 */ 
+	private $reefine;
+	
+	private $grid_fields = array();
+	
+	public static function get_instance($reefine) {
+		if (!isset(Reefine_util_grid_fields::$instance)) 
+			Reefine_util_grid_fields::$instance = new Reefine_util_grid_fields($reefine);
+		return Reefine_util_grid_fields::$instance;
+	}
+	
+	/**
+	 * 
+	 * @param Reefine $reefine
+	 */
+	private function __construct($reefine) {
+		$this->reefine = $reefine;
+		$rows = ee()->db->select('col_id, field_id, col_type, col_label, col_name')
+		->where('content_type', 'channel')
+		->get("{$this->reefine->dbprefix}grid_columns")->result_array();
+		foreach ($rows as $row) {
+			$this->grid_fields[$row['field_id']][$row['col_name']] = $row;
+		}		
+	}
+	
+	public function get_grid_field($field_id,$col_name) {
+		if (isset($this->grid_fields[$field_id][$col_name]))
+			return $this->grid_fields[$field_id][$col_name];
+		else 
+			throw new Exception ("Grid column " . $col_name . " not found.");
+	}
+	
+}
+
+class Reefine_field_matrix extends Reefine_field {
+
+	private $relation_field_id;
+
+	private $child_field_name;
+	private $parent_field_name;
+	private $table_alias;
+	private $grid_field;
+
+	function __construct($reefine,$field_name,$parent_field_name,$child_field_name) {
+		parent::__construct($reefine, $parent_field_name);
+
+		$this->reefine = $reefine;
+		$this->parent_field_name = $parent_field_name;
+		$this->child_field_name=$child_field_name;
+
+		$grid_fields = Reefine_util_matrix_fields::get_instance($reefine);
+
+		$this->grid_field = $grid_fields->get_grid_field($this->ee_field_info['field_id'],$child_field_name);
+
+		$this->table_alias = 'matrix_' . $this->grid_field['field_id']; //preg_replace('/[^A-Z0-9]/i','_',$this->relation_field_id);
+
+	}
+
+	function get_value_column() {
+		return "{$this->table_alias}.col_id_{$this->grid_field['col_id']}"; // . $this->get_field_by_key($this->child_field_name,'field_column');
+	}
+
+	function get_title_column() {
+		return $this->get_value_column();
+	}
+
+	function get_join_sql() {
+		// join the channel_grid_field_... table
+		$joins=array("LEFT OUTER JOIN {$this->reefine->dbprefix}matrix_data {$this->table_alias} " .
+		"ON {$this->table_alias}.entry_id = {$this->channel_data_alias}.entry_id ");
+
+		return $joins;
+	}
+}
+
+class Reefine_util_matrix_fields {
+	private static $instance;
+	/**
+	 * @var Reefine
+	 */
+	private $reefine;
+
+	private $grid_fields = array();
+
+	public static function get_instance($reefine) {
+		if (!isset(Reefine_util_matrix_fields::$instance))
+			Reefine_util_matrix_fields::$instance = new Reefine_util_matrix_fields($reefine);
+		return Reefine_util_matrix_fields::$instance;
+	}
+
+	/**
+	 *
+	 * @param Reefine $reefine
+	 */
+	private function __construct($reefine) {
+		$this->reefine = $reefine;
+		$rows = ee()->db->select('col_id, field_id, col_type, col_label, col_name')
+		->where('site_id', $this->reefine->site)
+		->get("{$this->reefine->dbprefix}matrix_cols")->result_array();
+		foreach ($rows as $row) {
+			$this->grid_fields[$row['field_id']][$row['col_name']] = $row;
+		}
+	}
+
+	public function get_grid_field($field_id,$col_name) {
+		if (isset($this->grid_fields[$field_id][$col_name]))
+			return $this->grid_fields[$field_id][$col_name];
+		else
+			throw new Exception ("Matrix column " . $col_name . " not found.");
+	}
+
+}
+
 
 class Reefine_group {
 	/**
