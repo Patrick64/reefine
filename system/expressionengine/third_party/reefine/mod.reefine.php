@@ -1346,6 +1346,7 @@ class Reefine_field_store extends Reefine_field {
 	 */
 	var $table_alias; 
 	function __construct($reefine,$field_name,$ee_field_name,$child_column) {
+		parent::__construct($reefine, $ee_field_name);
 		$dbprefix = $reefine->dbprefix;
 		$this->reefine = $reefine;
 		$this->assign_field_info($ee_field_name);
@@ -1357,7 +1358,7 @@ class Reefine_field_store extends Reefine_field {
 	
 	
 	function get_value_column() {
-		$this->column_name = "{$this->table_alias}.{$this->child_column}";
+		return "{$this->table_alias}.{$this->child_column}";
 	}
 	
 	function get_title_column() {
@@ -2444,8 +2445,8 @@ class Reefine_group_number_range extends Reefine_group {
 	}
 	
 	public function post_contains_filter_value() {
-		$value_min = ee()->input->get_post($this->group_name.'_min');
-		$value_max = ee()->input->get_post($this->group_name.'_max');
+		$value_min = $this->reefine->EE->input->get_post($this->group_name.'_min');
+		$value_max = $this->reefine->EE->input->get_post($this->group_name.'_max');
 		return ($value_min!==false || $value_max!==false);
 	}
 	
