@@ -1733,6 +1733,11 @@ class Reefine_group {
 	 */
 	public $orderby = 'value';
 	/**
+	 * Sort order, 'asc' for ascending, 'desc' for descending
+	 * @var integer
+	 */
+	public $sort = 'asc';
+	/**
 	 * array of category group IDs
 	 * @var unknown
 	 */
@@ -1810,12 +1815,14 @@ class Reefine_group {
 		$this->reefine->add_filter_group_setting($this, 'delimiter', '');
 		$this->reefine->add_filter_group_setting($this, 'join', 'or', 'text');
 		$this->reefine->add_filter_group_setting($this, 'orderby', 'value', 'text');
+		$this->reefine->add_filter_group_setting($this, 'sort', 'asc', 'text');
 		$this->reefine->add_filter_group_setting($this, 'category_group', array(), 'array');
 		$this->reefine->add_filter_group_setting($this, 'show_empty_filters', false, 'bool');
 			
 		if (count($this->category_group)>0) {
 			$this->cat_group_in_list = $this->reefine->array_to_in_list($this->category_group);
 		}
+		
 	}
 	
 	
@@ -2112,35 +2119,52 @@ class Reefine_group {
 	
 	
 
-	static function compare_filter_by_value($a, $b)
+	function compare_filter_by_value($a, $b)
 	{
 		if (is_numeric($a['filter_value']) && is_numeric($b['filter_value'])) {		
-			return ((floatval($a['filter_value'])>floatval($b['filter_value'])) ? 1 : -1);
+			return $this->sort_filter(floatval($a['filter_value'])>floatval($b['filter_value']) ? 1 : -1);
 		} else {
-			return (strcmp($a['filter_value'], $b['filter_value'])>0) ? 1 : -1;
+			return $this->sort_filter((strcmp($a['filter_value'], $b['filter_value'])>0) ? 1 : -1);
 		}
 
 	}
 	
-	static function compare_filter_by_count($a, $b){
+	function compare_filter_by_count($a, $b){
 		if ($a['filter_quantity'] == $b['filter_quantity'])
-			return self::compare_filter_by_value($a, $b);
+			return $this->compare_filter_by_value($a, $b);
 		else
-			return $a['filter_quantity'] < $b['filter_quantity'] ? 1 : -1;
+			return $this->sort_filter($a['filter_quantity'] < $b['filter_quantity'] ? 1 : -1);
 	}
 	
-	static function compare_filter_by_active($a, $b){
+	function compare_filter_by_active($a, $b){
 		if ($a['filter_active'] == $b['filter_active'])
-			return self::compare_filter_by_value($a, $b);
+			return $this->compare_filter_by_value($a, $b);
 		else
-			return $a['filter_active'] < $b['filter_active'] ? 1 : -1;
+			return $this->sort_filter($a['filter_active'] < $b['filter_active'] ? 1 : -1);
 	}
 	
-	static function compare_filter_by_active_count($a, $b){
+	function compare_filter_by_active_count($a, $b){
 		if ($a['filter_active'] == $b['filter_active'])
-			return self::compare_filter_by_count($a, $b);
+			return $this->compare_filter_by_count($a, $b);
 		else
-			return $a['filter_active'] < $b['filter_active'] ? 1 : -1;
+			return $this->sort_filter($a['filter_active'] < $b['filter_active'] ? 1 : -1);
+	}
+	
+	function compare_filter_by_custom($a, $b){
+		$pos_a = stripos('|' . $this->orderby . '|','|' . $a['filter_value'] . '|');
+		$pos_b = stripos('|' . $this->orderby . '|','|' . $b['filter_value'] . '|');
+		
+		if ($pos_a===false || $pos_b === false || $pos_a == $pos_b)
+			return $this->compare_filter_by_value($a, $b);
+		else
+			return $this->sort_filter($pos_a > $pos_b ? 1 : -1);
+	}
+	
+	function sort_filter($order) {
+		if ($this->sort == 'desc')
+			return -$order;
+		else
+			return $order;
 	}
 	
 	/**
@@ -2149,14 +2173,16 @@ class Reefine_group {
 	 * @param string $sort value, count, active, or active_count
 	 */
 	public function sort_filters() {
-		if ($this->orderby == 'value')
-			usort($this->filters, array(get_class($this),"compare_filter_by_value"));
+		if ($this->orderby == 'value' || $this->orderby == '')
+			usort($this->filters, array($this,"compare_filter_by_value"));
 		else if ($this->orderby == 'quantity')
-			usort($this->filters, array(get_class($this),"compare_filter_by_count"));
+			usort($this->filters, array($this,"compare_filter_by_count"));
 		else if ($this->orderby == 'active')
-			usort($this->filters, array(get_class($this),"compare_filter_by_active"));
+			usort($this->filters, array($this,"compare_filter_by_active"));
 		else if ($this->orderby == 'active_quantity')
-			usort($this->filters, array(get_class($this),"compare_filter_by_active_count"));
+			usort($this->filters, array($this,"compare_filter_by_active_count"));
+		else
+			usort($this->filters, array($this,"compare_filter_by_custom"));
 	}
 	
 	/**
