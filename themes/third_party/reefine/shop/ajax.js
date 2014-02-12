@@ -10,7 +10,7 @@
 		for (i = 0; i < pageLinks.length; i = i + 1) {
 			if (/P\d+$/.test(pageLinks[i].href)) {
 				pageLinks[i].onclick = function() {
-					AJAXPost(this.href + (/\?/.test(this.href) ? '&' : '?') + "ajax_request=1", ajax_success);
+					AJAXPost(this.href + (/\?/.test(this.href) ? '&' : '?') + params + "&ajax_request=1", ajax_success);
 					return false;
 				};
 			}
@@ -21,6 +21,7 @@
 		for (i = 0; i < filterLinks.length; i = i + 1) {
 			filterLinks[i].onclick = function() {
 				AJAXPost(this.href + (/\?/.test(this.href) ? '&' : '?') + "ajax_request=1", ajax_success);
+				params = getParams(this.href);
 				return false;
 			};
 		}
@@ -38,6 +39,15 @@
 		}
 	}
 
+	
+	function getParams(url) {
+		var matches = url.match(/\?(.*$)/);
+		if (matches && matches.length>1)
+			return matches[1];
+		else
+			return '';
+	}
+	
 	function ajax_success(response) {
 
 		var html = '';

@@ -893,7 +893,10 @@ class Reefine {
 		foreach ($this->filter_groups as $group) {
 			$qs = array_merge($qs,$group->get_filter_querystring_from_filter_values($filter_values[$group->group_name]));
 		}
-		$result = ee()->uri->uri_string() . '?' . implode($qs,'&');
+		$current_url = ee()->uri->uri_string();
+		// remove page number, we want to start at Page 1 each time.
+		$current_url = preg_replace('/\/P\d+\/?$/','/',$current_url);
+		$result = $current_url . '?' . implode($qs,'&');
 		// add a leading slash if one isn't provided
 		//if (strpos($result,'/')!==0 && strpos($result,'http://')!==0 && strpos($result,'https://')!==0) {
 		//	$result = '/' . $result;
