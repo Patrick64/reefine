@@ -15,7 +15,7 @@
 		{/filters}
 	{/search_groups}
 </div>
-<div class="reefine_sidebar" id="reefine_sidebar">
+<div class="reefine_sidebar" id="reefine_sidebar" role="navigation">
 	{if total_active_filters > 0}
 	<div class="reefine_active_filters">	
 		<h3>Selected Criteria</h3>
@@ -23,8 +23,8 @@
 		{active_groups}
 			<li><strong><a class="remove-filter" href="{clear_url}">{label}:</a></strong></li>
 			{filters}
-				<li class="{filter_active_class}"  aria-selected="{filter_active_boolean}">
-				<a href="{url}">{filter_title}</a>
+				<li class="{filter_active_class}">
+				<a href="{url}" aria-selected="{filter_active_boolean}">{filter_title}</a>
 				</li>
 				<!-- {filter_min_value}{filter_max_value}{filter_quantity}{filter_id} -->
 			{/filters}
@@ -38,8 +38,8 @@
 				<h3 class="group_{group_name}">{label}</h3>
 				<ul>
 				{filters}
-					<li class="{filter_active_class} filter-id-{filter_id}" aria-selected="{filter_active_boolean}">
-					<a href="{url}">{filter_title} ({filter_quantity})</a>
+					<li class="{filter_active_class} filter-id-{filter_id}">
+					<a href="{url}" aria-selected="{filter_active_boolean}">{filter_title} ({filter_quantity})</a>
 					</li>
 				{/filters}
 				</ul>
