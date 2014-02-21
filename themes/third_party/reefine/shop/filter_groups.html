@@ -11,7 +11,7 @@
 				value="{filter_title}" title="Search ({filter_quantity})" />
 		  <input type="submit" name="submit" value="Go" />
 		</form>
-		<!--  {url}{filter_active_boolean} -->
+		<!--  {url}{filter_active_boolean}{filter_id} -->
 		{/filters}
 	{/search_groups}
 </div>
@@ -26,7 +26,7 @@
 				<li class="{filter_active_class}"  aria-selected="{filter_active_boolean}">
 				<a href="{url}">{filter_title}</a>
 				</li>
-				<!-- {filter_min_value}{filter_max_value}{filter_quantity} -->
+				<!-- {filter_min_value}{filter_max_value}{filter_quantity}{filter_id} -->
 			{/filters}
 		{/active_groups}
 		</ul>
@@ -38,7 +38,7 @@
 				<h3 class="group_{group_name}">{label}</h3>
 				<ul>
 				{filters}
-					<li class="{filter_active_class}" aria-selected="{filter_active_boolean}">
+					<li class="{filter_active_class} filter-id-{filter_id}" aria-selected="{filter_active_boolean}">
 					<a href="{url}">{filter_title} ({filter_quantity})</a>
 					</li>
 				{/filters}

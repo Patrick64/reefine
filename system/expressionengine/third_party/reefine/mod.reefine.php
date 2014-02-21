@@ -224,7 +224,7 @@ class Reefine {
 			//$group->do_redirect_for_text_input();
 			if ($group->post_contains_filter_value()) {
 				$url = $this->get_filter_url();
-				ee()->functions->redirect($this->create_url($url));
+				$this->EE->functions->redirect($this->create_url($url));
 			}
 		}
 	}
@@ -893,7 +893,7 @@ class Reefine {
 		foreach ($this->filter_groups as $group) {
 			$qs = array_merge($qs,$group->get_filter_querystring_from_filter_values($filter_values[$group->group_name]));
 		}
-		$current_url = ee()->uri->uri_string();
+		$current_url = $this->EE->uri->uri_string();
 		// remove page number, we want to start at Page 1 each time.
 		$current_url = preg_replace('/\/P\d+\/?$/','/',$current_url);
 		$result = $current_url . '?' . implode($qs,'&');
@@ -1412,7 +1412,7 @@ class Reefine_field_publisher extends Reefine_field {
 		
 		$this->field_name = $ee_field_name;
 		
-		$this->session_language_id = intval(ee()->publisher_model->current_language['id']);
+		$this->session_language_id = intval($this->reefine->EE->publisher_model->current_language['id']);
 		
 	}
 	
@@ -1628,7 +1628,7 @@ class Reefine_util_grid_fields {
 	 */
 	private function __construct($reefine) {
 		$this->reefine = $reefine;
-		$rows = ee()->db->select('col_id, field_id, col_type, col_label, col_name')
+		$rows = $this->reefine->EE->db->select('col_id, field_id, col_type, col_label, col_name')
 		->where('content_type', 'channel')
 		->get("{$this->reefine->dbprefix}grid_columns")->result_array();
 		foreach ($rows as $row) {
@@ -1707,7 +1707,7 @@ class Reefine_util_matrix_fields {
 	 */
 	private function __construct($reefine) {
 		$this->reefine = $reefine;
-		$rows = ee()->db->select('col_id, field_id, col_type, col_label, col_name')
+		$rows = $this->reefine->EE->db->select('col_id, field_id, col_type, col_label, col_name')
 		->where('site_id', $this->reefine->site)
 		->get("{$this->reefine->dbprefix}matrix_cols")->result_array();
 		foreach ($rows as $row) {
@@ -1887,11 +1887,11 @@ class Reefine_group {
 	}
 	
 	public function do_redirect_for_text_input() {
-		$value = ee()->input->get_post($this->group_name);
+		$value = $this->reefine->EE->input->get_post($this->group_name);
 		
 		if ($value !== false) {
 			$url = $this->reefine->get_filter_url($this->group_name,$value,true);
-			ee()->functions->redirect($this->reefine->create_url($url));
+			$this->reefine->EE->functions->redirect($this->reefine->create_url($url));
 			return;
 		}
 		
@@ -1899,12 +1899,12 @@ class Reefine_group {
 	
 	
 	public function post_contains_filter_value() {
-		$value = ee()->input->get_post($this->group_name);
+		$value = $this->reefine->EE->input->get_post($this->group_name);
 		return ($value!==false);
 	}
 	
 	public function get_filter_value_from_post() {
-		$value = ee()->input->get_post($this->group_name);
+		$value = $this->reefine->EE->input->get_post($this->group_name);
 		if (is_array($value)) {
 			// <option value="">Any</option> will post array('') so we need to ignore that
 			if (count($value)>0 && $value[0]!='')
@@ -2083,6 +2083,7 @@ class Reefine_group {
 						$this->filters[] = array(
 								'filter_value' => $filter_value_sub,
 								'filter_quantity' => $filter['filter_quantity'],
+								'filter_id' => '',
 								'filter_title' => $filter_value_sub
 						);
 						$filter_index[$filter_value_sub] = count($this->filters)-1;
@@ -2308,7 +2309,10 @@ class Reefine_group_list extends Reefine_group {
 			
 		}
 		if (count($this->category_group)>0) {
-			$results = $this->get_filter_groups_for_list("cat_{$this->group_name}.cat_url_title","cat_{$this->group_name}.cat_name",
+			$results = $this->get_filter_groups_for_list(
+			"cat_{$this->group_name}.cat_url_title",
+			"cat_{$this->group_name}.cat_name",
+			"cat_{$this->group_name}.cat_id",
 			"cat_{$this->group_name}.group_id IN {$this->cat_group_in_list}");
 			$this->filters = array_merge($this->filters,$results);
 		}
@@ -2344,10 +2348,11 @@ class Reefine_group_list extends Reefine_group {
 		}
 		
 	}
-	private function get_filter_groups_for_list($column_name,$title_column_name,$extra_clause = '') {
+	private function get_filter_groups_for_list($column_name,$title_column_name,$filter_column_id = '',$extra_clause = '') {
 		// have to give up on active record select coz of this bug: http://stackoverflow.com/questions/7927458/codeigniter-db-select-strange-behavior
 		
 		$sql = "SELECT {$column_name} as filter_value, " .
+		($filter_column_id ? $filter_column_id : "''") . " as filter_id, " .
 		"{$title_column_name} as filter_title, {$this->get_filter_count_statement()} " .
 		"FROM {$this->dbprefix}channel_data ";
 			
@@ -2361,8 +2366,8 @@ class Reefine_group_list extends Reefine_group {
 		if ($extra_clause!='')
 			$sql .= " AND ({$extra_clause}) ";
 		// Wrap sql statement in select statement so we can get total of each distinct entry
-		$sql = "SELECT filter_value, filter_title, count(distinct(entry_id)) as filter_quantity ".
-		" FROM ({$sql}) t1 GROUP BY filter_value, filter_title";
+		$sql = "SELECT filter_value, filter_title, filter_id, count(distinct(entry_id)) as filter_quantity ".
+		" FROM ({$sql}) t1 GROUP BY filter_value, filter_id, filter_title";
 			
 		$results = $this->reefine->db->query($sql)->result_array();
 		return $results;
@@ -2501,8 +2506,8 @@ class Reefine_group_number_range extends Reefine_group {
 	}
 	
 	public function get_filter_value_from_post() {
-		$value_min = ee()->input->get_post($this->group_name.'_min');
-		$value_max = ee()->input->get_post($this->group_name.'_max');
+		$value_min = $this->reefine->EE->input->get_post($this->group_name.'_min');
+		$value_max = $this->reefine->EE->input->get_post($this->group_name.'_max');
 		$values = array();
 		if ($value_min!==false && $value_min!=='')
 			$values['min'] = $value_min;
@@ -2516,7 +2521,7 @@ class Reefine_group_number_range extends Reefine_group {
 		
 		if (count($values)>0) {
 			$url = $this->reefine->get_filter_url($this->group_name,$values,true);
-			ee()->functions->redirect($this->reefine->create_url($url));
+			$this->reefine->EE->functions->redirect($this->reefine->create_url($url));
 			return;
 		}
 	}
@@ -2565,6 +2570,7 @@ class Reefine_group_number_range extends Reefine_group {
 			$filters[] = array(
 					'filter_value'=>'',
 					'filter_title'=>'',
+					'filter_id'=>'',
 					'filter_min'=>'',
 					'filter_max'=>'',
 					'filter_quantity'=>0,
@@ -2726,6 +2732,7 @@ class Reefine_group_search extends Reefine_group {
 			$this->filters = array(array(
 					'filter_value'=> $this->values[0],
 					'filter_title'=> $this->values[0],
+					'filter_id' => '',
 					'group_name' => $this->group_name,
 					'filter_quantity'=>1,
 					'filter_active'=>true));
@@ -2736,6 +2743,7 @@ class Reefine_group_search extends Reefine_group {
 			$this->filters = array(array(
 					'filter_value'=> '',
 					'filter_title' => '',
+					'filter_id' => '',
 					'group_name' => $this->group_name,
 					'filter_quantity'=>0,
 					'filter_active'=>false));
@@ -2896,6 +2904,7 @@ class Reefine_group_month_list extends Reefine_group_list {
 							$this->filters[$current->format('Y-m-d')] = array(
 								'filter_value' => $current->format('Y-m-d'),
 								'filter_title' => $current->format('F Y'),
+								'filter_id' => '',
 								'filter_quantity' => $row['filter_quantity']
 							);
 						} else {
