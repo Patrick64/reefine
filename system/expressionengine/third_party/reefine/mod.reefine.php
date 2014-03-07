@@ -28,6 +28,11 @@ class Reefine {
 	 */
 	var $dbprefix = 'exp_';
 	/**
+	 * 
+	 * @var CI_Controller
+	 */
+	public $EE;
+	/**
 	 *
 	 * @var array array of filter values to filter by in order of group, filter
 	 */
@@ -1358,6 +1363,7 @@ class Reefine_field_store extends Reefine_field {
 		$this->table_alias = 'store_products_' . preg_replace('/[^A-Z0-9]/i','_',$ee_field_name);
 		$this->sales_alias = 'store_sales_' . preg_replace('/[^A-Z0-9]/i','_',$ee_field_name);
 		$this->sales_cat_alias = 'store_sales_cat_' . preg_replace('/[^A-Z0-9]/i','_',$ee_field_name);
+		
 	}
 	
 	
@@ -1382,16 +1388,24 @@ class Reefine_field_store extends Reefine_field {
 		// if we want the on_sale parameter then we have to check the start/end date of the sale
 		// then check if the current entry is listed in the entry_ids column or if the entry's category id
 		// is in the category_ids column, both columns are pipe delimited numbers
-		if ($this->child_column=='on_sale')
+		if ($this->child_column=='on_sale') {
+			// http://ellislab.com/expressionengine/user-guide/development/usage/session.html
+			$member_group_id = $this->reefine->EE->session->userdata('group_id'); //$ee->session; // ->userdata; //['group_id'];
+			// join exp_store_sales table entries if the sale is in the current date and matches a list of entry_ids
+			// or category ids, optionally restricted by member group
 			$joins[] = " LEFT OUTER JOIN {$this->reefine->dbprefix}category_posts {$this->sales_cat_alias}
 			ON {$this->sales_cat_alias}.entry_id = {$this->channel_data_alias}.entry_id
 			LEFT OUTER JOIN {$this->reefine->dbprefix}store_sales {$this->sales_alias} 
-			ON {$this->sales_alias}.start_date<=UNIX_TIMESTAMP() AND  {$this->sales_alias}.end_date>=UNIX_TIMESTAMP() 
+			ON {$this->sales_alias}.start_date<=UNIX_TIMESTAMP() AND  {$this->sales_alias}.end_date>=UNIX_TIMESTAMP()
+			AND ({$this->sales_alias}.member_group_ids = ''
+				OR LOCATE('|{$member_group_id}|',concat('|',{$this->sales_alias}.member_group_ids,'|'))>0) 
 			AND (({$this->sales_alias}.entry_ids<>'' 
 				AND LOCATE(concat('|',{$this->channel_data_alias}.entry_id,'|'),concat('|',{$this->sales_alias}.entry_ids,'|'))>0) 
 			OR ({$this->sales_alias}.category_ids <> ''
-				AND LOCATE(concat('|',{$this->sales_cat_alias}.cat_id,'|'),concat('|',{$this->sales_alias}.category_ids,'|'))>0)) \n";
+				AND LOCATE(concat('|',{$this->sales_cat_alias}.cat_id,'|'),concat('|',{$this->sales_alias}.category_ids,'|'))>0))\n";
+		}
 		return $joins;
+		
 	}
 	
 }
