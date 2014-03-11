@@ -1396,13 +1396,14 @@ class Reefine_field_store extends Reefine_field {
 			$joins[] = " LEFT OUTER JOIN {$this->reefine->dbprefix}category_posts {$this->sales_cat_alias}
 			ON {$this->sales_cat_alias}.entry_id = {$this->channel_data_alias}.entry_id
 			LEFT OUTER JOIN {$this->reefine->dbprefix}store_sales {$this->sales_alias} 
-			ON {$this->sales_alias}.start_date<=UNIX_TIMESTAMP() AND  {$this->sales_alias}.end_date>=UNIX_TIMESTAMP()
-			AND ({$this->sales_alias}.member_group_ids = ''
+			ON ({$this->sales_alias}.start_date IS NULL OR {$this->sales_alias}.start_date<=UNIX_TIMESTAMP()) 
+			AND  ({$this->sales_alias}.end_date IS NULL OR {$this->sales_alias}.end_date>=UNIX_TIMESTAMP())
+			AND (NULLIF({$this->sales_alias}.member_group_ids,'') IS NULL 
 				OR LOCATE('|{$member_group_id}|',concat('|',{$this->sales_alias}.member_group_ids,'|'))>0) 
-			AND (({$this->sales_alias}.entry_ids<>'' 
+			AND (( {$this->sales_alias}.entry_ids IS NOT NULL 
 				AND LOCATE(concat('|',{$this->channel_data_alias}.entry_id,'|'),concat('|',{$this->sales_alias}.entry_ids,'|'))>0) 
-			OR ({$this->sales_alias}.category_ids <> ''
-				AND LOCATE(concat('|',{$this->sales_cat_alias}.cat_id,'|'),concat('|',{$this->sales_alias}.category_ids,'|'))>0))\n";
+				OR ({$this->sales_alias}.category_ids IS NOT NULL
+					AND LOCATE(concat('|',{$this->sales_cat_alias}.cat_id,'|'),concat('|',{$this->sales_alias}.category_ids,'|'))>0))\n";
 		}
 		return $joins;
 		
