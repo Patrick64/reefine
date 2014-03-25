@@ -581,8 +581,12 @@ class Reefine {
 				$clauses = array_merge($clauses,$group->get_where_clause());
 			}
 		}
+
 		// ensure status is open or whatever is supplied
-		$clauses[] = "({$this->dbprefix}channel_titles.status = '' OR {$this->dbprefix}channel_titles.status = " . $this->db->escape($this->status) . ")";
+		$clauses[] = $this->get_status_where_clause($this->status,"{$this->dbprefix}channel_titles.status");
+		
+		
+		
 		// limit to current site
 		$clauses[] = "{$this->dbprefix}channel_titles.site_id = " . intval($this->site);
 		// hide expired entries if neccesary
@@ -635,7 +639,35 @@ class Reefine {
 		}
 	}
 
-
+	/**
+	 * status fuction from modules/channel/mod.channel.php line 1590ish
+	 * @param unknown $status
+	 * @param unknown $column
+	 * @return string
+	 */
+	function get_status_where_clause($status,$column) {
+		if ($status != '')
+		{
+			$status = str_replace('Open',	'open',	$status);
+			$status = str_replace('Closed', 'closed', $status);
+				
+			$sstr = $this->EE->functions->sql_andor_string($status, $column);
+			// get rid of AND at beggining
+			$sstr = preg_replace('/^\s*AND/i', '', $sstr);
+			// if it doesnt contain closed then exclude all closed entries	
+			if (stristr($sstr, "'closed'") === FALSE)
+			{
+				$sstr .= " AND {$column} != 'closed' ";
+			}
+				
+			return $sstr;
+		}
+		else
+		{
+			return "{$column} = 'open'";
+		}
+			
+	}
 
 
 	/**
