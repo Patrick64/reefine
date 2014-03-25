@@ -97,6 +97,12 @@ class Reefine {
 	var $url_suffix = '';
 	
 	var $disable_search = false;
+	
+	/**
+	 * limit by a category url
+	 * @var unknown
+	 */
+	var $category_url = '';
 	/**
 	 * @var array default settings for group if not otherwise specified
 	 */
@@ -400,12 +406,12 @@ class Reefine {
 
 		// category_url parameter limits results to just the the category_url
 		if (!empty($this->EE->TMPL->tagparams['category_url'])) {
-				
+			$this->category_url = $this->EE->TMPL->tagparams['category_url'];
 			// include categories in select using a global category table that is left joined
 			$this->include_categories=true; // yes to joining a global category table
 			$this->search_field_where_clause .= $this->search_field_where_clause=='' ? '' : ' AND ';
 			$this->search_field_where_clause .= sprintf("global_cat.cat_url_title=%s",
-			$this->db->escape($this->EE->TMPL->tagparams['category_url']));
+			$this->db->escape($this->category_url));
 		}
 		
 
@@ -915,8 +921,8 @@ class Reefine {
 	
 	
 	private function urlencode($value) {
-		// double encode URL
-		return str_replace('%', '%40', urlencode($value)); 
+		// EE can't stand question marks in the url, even if they're encoded so put an @ followed by the char HEX code to decode laters
+		return strtr(urlencode($value), array('%3F'=> '%403F', '%40'=>'%4040'));
 	}
 	
 	public function create_url($url)
