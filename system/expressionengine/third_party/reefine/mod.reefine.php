@@ -246,6 +246,13 @@ class Reefine {
 		// back up existing TMPL class
 		$this->EE->load->library('template');
 		$OLD_TMPL = isset($this->EE->TMPL) ? $this->EE->TMPL : NULL;
+		if ($OLD_TMPL && $OLD_TMPL->parse_php == TRUE && $OLD_TMPL->php_parse_location == 'input' && $OLD_TMPL->cache_status != 'CURRENT')
+		{
+			//$this->log_item("Parsing PHP on Input");
+			$tagdata = $this->EE->TMPL->parse_template_php($tagdata);
+		}
+				
+			
 		$this->EE->TMPL = new EE_Template();
 		$html = $this->EE->TMPL->parse_variables_row($tagdata, $tag_array);
 		
@@ -265,8 +272,17 @@ class Reefine {
 		
 		// parse email contents as complete template
 		$this->EE->TMPL->parse($html);
+		
+		
+		
 		$html = $this->EE->TMPL->parse_globals($this->EE->TMPL->final_template);
 		
+		if ($OLD_TMPL && $OLD_TMPL->parse_php == TRUE && $OLD_TMPL->php_parse_location == 'output' && $OLD_TMPL->cache_status != 'CURRENT')
+		{
+			//$this->log_item("Parsing PHP on Output");
+			$html = $this->EE->TMPL->parse_template_php($html);
+		}
+			
 		// restore old TMPL class
 		$this->EE->TMPL = $OLD_TMPL;
 		
