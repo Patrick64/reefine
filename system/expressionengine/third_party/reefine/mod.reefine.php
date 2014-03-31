@@ -1669,7 +1669,7 @@ class Reefine_field_grid extends Reefine_field {
 
 	function get_join_sql() {
 		// join the channel_grid_field_... table
-		$joins=array("LEFT OUTER JOIN {$this->reefine->dbprefix}channel_grid_field_31 {$this->table_alias} " .
+		$joins=array("LEFT OUTER JOIN {$this->reefine->dbprefix}channel_grid_field_{$this->grid_field['field_id']} {$this->table_alias} " .
 		"ON {$this->table_alias}.entry_id = {$this->channel_data_alias}.entry_id ");
 		
 		return $joins;
