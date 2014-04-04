@@ -9,6 +9,11 @@ class Reefine {
 	var $filter_groups;
 	var $url_tag;
 	/**
+	 * Value of url parameter or url_output parameter if provided
+	 * @var string
+	 */
+	var $url_output;
+	/**
 	 * @var boolean Whether to join exp_channel_titles on queries
 	 */
 	var $include_channel_titles = false; // include the channel entry title in searches.
@@ -380,6 +385,7 @@ class Reefine {
 		// methods: url,post,get,ajax,
 		$this->method = $this->EE->TMPL->fetch_param('method', 'url');
 		$this->url_tag = $this->EE->TMPL->fetch_param('url', '');
+		$this->url_output = $this->EE->TMPL->fetch_param('url_output', $this->url_tag);
 		$this->theme_name = $this->EE->TMPL->fetch_param('theme', '');
 		$this->seperate_filters = ($this->EE->TMPL->fetch_param('seperate_filters', '') == 'yes' ? true : false);
 		// get list of channel ids to choose from
@@ -922,7 +928,7 @@ class Reefine {
 	 */
 	private function get_filter_url_from_filter_values($filter_values) {
 		//$url_template = trim($this->url_tag,'/');
-		$url_template = $this->url_tag;
+		$url_template = $this->url_output;
 		$result = $url_template;
 		// for each tag in reefine's url="" parameter
 		foreach ($this->url_tags as $tag) {
