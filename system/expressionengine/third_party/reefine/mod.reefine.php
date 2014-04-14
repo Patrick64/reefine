@@ -195,7 +195,7 @@ class Reefine {
 			// change expressione ngin uri so paging works
 			if ($this->method=='url') {
 				if (!$this->disable_search) $this->do_redirects_for_text_inputs();
-				$this->change_uri_for_paging();
+				//$this->change_uri_for_paging();
 			}
 
 			// get the list of possible values to be used
@@ -612,11 +612,11 @@ class Reefine {
 		// limit to current site
 		$clauses[] = "{$this->dbprefix}channel_titles.site_id = " . intval($this->site);
 		// hide expired entries if neccesary
-		//if ($this->EE->TMPL->fetch_param('show_expired') != 'yes')
-		$clauses[] =  "({$this->dbprefix}channel_titles.expiration_date = 0 OR {$this->dbprefix}channel_titles.expiration_date > {$this->timestamp}) ";
+		if ($this->EE->TMPL->fetch_param('show_expired') != 'yes')
+			$clauses[] =  "({$this->dbprefix}channel_titles.expiration_date = 0 OR {$this->dbprefix}channel_titles.expiration_date > {$this->timestamp}) ";
 		// hide future entries if neccesary
-		//if ($this->EE->TMPL->fetch_param('show_future_entries') != 'yes')
-		$clauses[] = "{$this->dbprefix}channel_titles.entry_date < ".$this->timestamp;
+		if ($this->EE->TMPL->fetch_param('show_future_entries') != 'yes')
+			$clauses[] = "{$this->dbprefix}channel_titles.entry_date < ".$this->timestamp;
 
 		// add search fields if neccesary
 		if ($this->search_field_where_clause != '')
