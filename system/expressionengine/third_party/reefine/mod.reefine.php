@@ -2302,6 +2302,9 @@ class Reefine_group {
 		
 		// format filters for output
 		$group['filters'] = array();
+		$group['active_filters'] = $this->active_filters;
+		$group['total_filters'] = $this->total_filters;
+		$group['matching_filters'] = $this->matching_filters;
 		$active_index = 0;
 		foreach ($this->filters as $filter_key => $filter) {
 			$filter_active = $filter['filter_active'];
