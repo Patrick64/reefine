@@ -108,6 +108,13 @@ class Reefine {
 	 * @var unknown
 	 */
 	var $category_url = '';
+	
+	/**
+	 * category parameter, see function limit_by_category_ids
+	 * @var string
+	 */
+	var $category = '';
+	
 	/**
 	 * @var array default settings for group if not otherwise specified
 	 */
@@ -428,17 +435,53 @@ class Reefine {
 
 		// category_url parameter limits results to just the the category_url
 		if (!empty($this->EE->TMPL->tagparams['category_url'])) {
-			$this->category_url = $this->EE->TMPL->tagparams['category_url'];
+			$this->limit_by_category_url($this->EE->TMPL->tagparams['category_url']);
+		}
+		
+		// category_url parameter limits results to just the the category_url
+		if (!empty($this->EE->TMPL->tagparams['category'])) {
+			$this->limit_by_category_ids($this->EE->TMPL->tagparams['category']);
+		}
+
+	}
+	
+	function limit_by_category_url($category_url) {
+		$this->category_url = $category_url;
+		// include categories in select using a global category table that is left joined
+		$this->include_categories=true; // yes to joining a global category table
+		$this->search_field_where_clause .= $this->search_field_where_clause=='' ? '' : ' AND ';
+		$this->search_field_where_clause .= sprintf("global_cat.cat_url_title=%s",
+		$this->db->escape($this->category_url));
+	}
+	
+	/**
+	 * Limit by category like EE does here:
+	 * http://ellislab.com/expressionengine/user-guide/add-ons/channel/channel_entries.html#category
+	 * @param unknown $category_url
+	 */
+	function limit_by_category_ids($category) {
+		if (preg_match_all('/\d+/',$category,$matches)) {
+			$categories = $matches[0];
+			$this->category = $category;
 			// include categories in select using a global category table that is left joined
 			$this->include_categories=true; // yes to joining a global category table
 			$this->search_field_where_clause .= $this->search_field_where_clause=='' ? '' : ' AND ';
-			$this->search_field_where_clause .= sprintf("global_cat.cat_url_title=%s",
-			$this->db->escape($this->category_url));
+			$logic_not = (strpos($category, 'not')!==false);
+			$logic_and = (strpos($category, '&')!==false);
+			$logic_or = (strpos($category, '|')!==false);
+			
+			if ($logic_or) {
+				$sql = 'global_cat.cat_id ' . ($logic_not ? 'NOT IN' : 'IN') .
+				 ' (' . implode(',',$categories) . ')';
+			} else {
+				$sql = '(global_cat.cat_id = ' . implode(' AND global_cat.cat_id = ',$categories) . ')'; 
+			}
+			$this->search_field_where_clause .= $sql;
 		}
-		
-
-
 	}
+	 
+	
+	
 	/**
 	 * get settings from tag parameters
 	 */
