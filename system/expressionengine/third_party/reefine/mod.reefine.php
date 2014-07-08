@@ -474,7 +474,8 @@ class Reefine {
 				$sql = 'global_cat.cat_id ' . ($logic_not ? 'NOT IN' : 'IN') .
 				 ' (' . implode(',',$categories) . ')';
 			} else {
-				$sql = '(global_cat.cat_id = ' . implode(' AND global_cat.cat_id = ',$categories) . ')'; 
+				$sql = ($logic_not ? ' NOT' : '') . 
+				' (global_cat.cat_id = ' . implode(' AND global_cat.cat_id = ',$categories) . ')'; 
 			}
 			$this->search_field_where_clause .= $sql;
 		}
