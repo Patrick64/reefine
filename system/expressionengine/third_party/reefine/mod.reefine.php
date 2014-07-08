@@ -1307,6 +1307,17 @@ class Reefine {
 		return false;
 	}
 	
+	// array('a'=>'b','c'=>'d') becomes ,b as a, d as c
+	public static function column_implode(&$array) {
+		$result = "";
+		$glue=', ';
+		foreach ($array as $key => $value) {
+			$result .=  $glue . $value . ' as ' . $key;
+		}
+	
+		return $result;
+	}
+	
 	/**
 	 * 
 	 * @param unknown $field_name
@@ -2432,10 +2443,14 @@ class Reefine_group_list extends Reefine_group {
 		}
 		if (count($this->category_group)>0) {
 			$results = $this->get_filter_groups_for_list(
-			"cat_{$this->group_name}.cat_url_title",
-			"cat_{$this->group_name}.cat_name",
-			"cat_{$this->group_name}.cat_id",
-			"cat_{$this->group_name}.group_id IN {$this->cat_group_in_list}");
+					"cat_{$this->group_name}.cat_url_title",
+					"cat_{$this->group_name}.cat_name",
+					"cat_{$this->group_name}.cat_id",
+					array("cat_order"=>"cat_{$this->group_name}.cat_order",
+					"parent_id"=>"cat_{$this->group_name}.parent_id",
+					"group_id"=>"cat_{$this->group_name}.group_id"),
+					"cat_{$this->group_name}.group_id IN {$this->cat_group_in_list}",
+					"ORDER BY group_id,parent_id, cat_order ");
 			$this->filters = array_merge($this->filters,$results);
 		}
 		// remove duplicates http://stackoverflow.com/a/946300/1102000
@@ -2470,28 +2485,41 @@ class Reefine_group_list extends Reefine_group {
 		}
 		
 	}
-	private function get_filter_groups_for_list($column_name,$title_column_name,$filter_column_id = '',$extra_clause = '') {
+	/**
+	 * Get an array of filter group for the list filter group type
+	 * @param unknown $column_name Name of database column for {filter_value}, may be preceeded by table name
+	 * @param unknown $title_column_name Name of database column for the {filter_title}, may be preceeded by table name
+	 * @param string $filter_column_id Name of database column for {filter_id} (this is usually cat_id), may be preceeded by table name
+	 * @param unknown $extra_columns An associative array of extra columns of form "column-alias" => "database-column"
+	 * @param string $extra_clause Any extra clauses on where cluse
+	 * @return array
+	 */
+	public function get_filter_groups_for_list($column_name,$title_column_name,$filter_column_id = '',$extra_columns = array(), $extra_clause = '', $order_by = '') {
 		// have to give up on active record select coz of this bug: http://stackoverflow.com/questions/7927458/codeigniter-db-select-strange-behavior
 		
 		$sql = "SELECT {$column_name} as filter_value, " .
 		($filter_column_id ? $filter_column_id : "''") . " as filter_id, " .
-		"{$title_column_name} as filter_title, {$this->get_filter_count_statement()} " .
-		"FROM {$this->dbprefix}channel_data ";
+		"{$title_column_name} as filter_title, {$this->get_filter_count_statement()} " . 
+		Reefine::column_implode($extra_columns) .
+		" FROM {$this->dbprefix}channel_data ";
 			
 		//if ($this->include_channel_titles)
 		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
 		$sql .= $this->reefine->get_query_join_sql($this->group_name);
-		$sql .= "WHERE {$column_name} <> '' ";
+		$sql .= " WHERE {$column_name} <> '' ";
 		if (isset($this->reefine->channel_ids)) {
 			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
 		}
 		if ($extra_clause!='')
 			$sql .= " AND ({$extra_clause}) ";
 		// Wrap sql statement in select statement so we can get total of each distinct entry
-		$sql = "SELECT filter_value, filter_title, filter_id, count(distinct(entry_id)) as filter_quantity ".
-		" FROM ({$sql}) t1 GROUP BY filter_value, filter_id, filter_title";
-			
-		$results = $this->reefine->db->query($sql)->result_array();
+		
+		// now wrap in a select that will add all distinct entries together to get {filter_quantity} 
+		$filters_sql = "SELECT filter_value, filter_title, filter_id, count(distinct(entry_id)) as filter_quantity " .
+		((count($extra_columns)>0) ? "," . implode(',',array_keys($extra_columns)) : '') . 
+		" FROM ({$sql}) t1 GROUP BY filter_value, filter_id, filter_title " . $order_by;
+		
+		$results = $this->reefine->db->query($filters_sql)->result_array();
 		return $results;
 	}
 	
@@ -2916,7 +2944,109 @@ class Reefine_group_search extends Reefine_group {
 		
 }
 
+class Reefine_group_tree extends Reefine_group_list {
+	function __construct($reefine,$group_name) {
+		parent::__construct($reefine,$group_name);
+	}
+	function set_filters() {
+		$this->filters = array();
+		// for each field in the filter group
+		foreach ($this->fields as &$field) {
+			// get list of possible values
+			$results = $this->get_filter_groups_for_list($this->get_field_value_column($field),$this->get_field_title_column($field));
+			$this->filters = array_merge($this->filters,$results);
+				
+		}
+		if (count($this->category_group)>0) {
+			$results = $this->get_filter_groups_for_list(
+					"cat_{$this->group_name}.cat_url_title",
+					"cat_{$this->group_name}.cat_name",
+					"cat_{$this->group_name}.cat_id",
+					array("cat_order"=>"cat_{$this->group_name}.cat_order",
+					"parent_id"=>"cat_{$this->group_name}.parent_id",
+					"group_id"=>"cat_{$this->group_name}.group_id"),
+					"cat_{$this->group_name}.group_id IN {$this->cat_group_in_list}",
+					"ORDER BY group_id,parent_id, cat_order ");
+			$this->filters = array_merge($this->filters,$results);
+		}
+	
+		// set totals for use in templates
+	
+		$this->set_filter_totals();
+		// sort filters on orderby
+		$this->sort_filters();
+		$this->set_filter_depths();
+	
+	
+	}
+	
 
+// 	function compare_filter_for_tree($a, $b){
+// 		if ()
+// 		if ($a['cat_order']!=$b['cat_order'])		
+// 		if ($pos_a===false || $pos_b === false || $pos_a == $pos_b)
+// 			return $this->compare_filter_by_value($a, $b);
+// 		else
+// 			return $this->sort_filter($pos_a > $pos_b ? 1 : -1);
+// 	}
+	
+	// this doesnt work, replace with this http://ellislab.com/expressionengine/user-guide/development/reference/tree_datastructure.html
+	
+	function compare_filter_for_tree($a, $b)
+	{
+		if ( $a['filter_id'] == $b['filter_id'] ) {
+			return 0;
+	
+		} else if ( $a['parent_id'] ) {
+			if ( $a['parent_id'] == $b['parent_id'] ) {
+				return ( $a['filter_id'] < $b['filter_id'] ? -1 : 1 );
+			} else {
+				return ( $a['parent_id'] >= $b['filter_id'] ? 1 : -1 );
+			}
+		} else if ( $b['parent_id'] ) {
+			return ( $b['parent_id'] >= $a['filter_id'] ? -1 : 1);
+		} else {
+			return ( $a['filter_id'] < $b['filter_id'] ? -1 : 1 );
+		}
+	}
+	
+	/**
+	 * Sort filters based on $sort
+	 * @param array $filters
+	 * @param string $sort value, count, active, or active_count
+	 */
+	public function sort_filters() {
+		//usort($this->filters, array($this,"compare_filter_for_tree"));
+		$this->reefine->EE->load->library('datastructures/tree');
+		$root = $this->reefine->EE->tree->from_list($this->filters,array('key'=>'filter_id','parent_id'=>'parent_id'));
+		$result = array();
+		$it = $root->preorder_iterator();
+		
+		foreach ($it as $node)
+		{
+			$data = $node->data();
+			$data['depth']=$node->getDepth();
+			$result[] = $data; 
+		}
+		$this->filters = $result;
+		
+	}
+	
+	public function set_filter_depths() {
+		$filter_depths = array();
+		foreach($this->filters as &$filter) {
+			if ($filter['parent_id']==0) {
+				$filter['depth']=0;
+				$filter_depths[$filter['filter_id']] = 0;
+			} else {
+				$filter['depth'] = $filter_depths[$filter['parent_id']] + 1;
+				$filter_depths[$filter['filter_id']] = $filter['depth'];
+			}
+		}
+		unset($filter);
+	}
+	
+}
 
 class Reefine_group_month_list extends Reefine_group_list {
 	public $type = 'list';
