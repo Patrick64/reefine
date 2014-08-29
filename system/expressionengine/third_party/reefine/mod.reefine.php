@@ -1314,37 +1314,40 @@ class Reefine {
 	 * @return Reefine_field
 	 */
 	function get_field_obj($field_name) {
-		// field base is the default class name for the field
-		$field_base = 'Reefine_field';
-		// Publisher module detected so check the publisher fields instead
-		if (isset($this->EE->publisher_model)) {
-			$field_base = 'Reefine_field_publisher';
-		}
+		// string to append on class name (eg _relationship )
+		$class_append = '';
+		// the actual field name in ee
+		$ee_field_name = $field_name;
+		// child field name for fields that have a subfield
+		$child_field = '';
+		$field_type='';
+		
 		// if field name conmtains a colon
 		if (strpos($field_name,':')!==false) {
 			list($ee_field_name,$child_field) = explode(':', $field_name);
 			$field_type = $this->_custom_fields[$this->site][$ee_field_name]['field_type'];
-			$field_class = $field_base . '_' . $field_type;
-			if (class_exists($field_class)) {
-				return new $field_class($this,$field_name, $ee_field_name,$child_field);
-			} else {
-				throw new Exception('Reefine error: Fieldtype ' . $field_type . ' not supported.');
-			}
+			$class_append = '_' . $field_type;
+			
 		} else {
 			// field doesnt have a colon - lets look at the field type anyway
 			$field_type = $this->_custom_fields[$this->site][$field_name]['field_type'];
 			// if the filter is a relationship/playa field and no subfield is specified then we show the title in the filter
 			if ($field_type=='relationship' || $field_type=='playa')
-				$field_class = $field_base . '_' . $field_type; // eg Reefine_field_playa
-			else	
-				$field_class = $field_base; // eg Reefine_field
-			// instanciate our object
-			if (class_exists($field_class)) {
-				return new $field_class($this, $field_name, $field_name, '');
-			} else {
-				// class not found
-				throw new Exception('Reefine error: ' . $field_class . ' not supported.');
-			}
+				$class_append = '_' . $field_type;
+					
+		}
+			
+		// Publisher module detected so check if a class exists for the publisher fields
+		if (isset($this->EE->publisher_model) && class_exists('Reefine_field_publisher' . $class_append)) {
+			$field_class='Reefine_field_publisher' . $class_append;
+			return new $field_class($this,$field_name, $ee_field_name,$child_field);
+			// publisher module doesn't exist or so just go
+		} else if (class_exists('Reefine_field' . $class_append)) {
+			$field_class='Reefine_field' . $class_append;
+			return new $field_class($this,$field_name, $ee_field_name,$child_field);
+		
+		} else {
+			throw new Exception('Reefine error: Fieldtype "' . $field_type . '" not supported.');
 		}
 	}
 }
@@ -1398,7 +1401,7 @@ class Reefine_field {
 	
 	protected $channel_titles_alias = '';
 	
-	function __construct($reefine, $field_name,$parent_field_name) {
+	function __construct($reefine, $field_name,$parent_field_name='',$child_field_name='') {
 		
 		$this->reefine = $reefine;
 		$this->field_name = $field_name;
@@ -1534,7 +1537,7 @@ class Reefine_field_publisher extends Reefine_field {
 	
 	private $session_language_id;
 	
-	function __construct($reefine,$field_name,$ee_field_name) {
+	function __construct($reefine,$field_name,$ee_field_name,$child_field_name='') {
 		parent::__construct($reefine, $ee_field_name, '');
 		
 		$this->reefine = $reefine;
@@ -1546,7 +1549,10 @@ class Reefine_field_publisher extends Reefine_field {
 	}
 	
 	function get_value_column() {
-		return "{$this->reefine->dbprefix}publisher_data.{$this->db_column}";
+		if ($this->db_column=='title')
+			return "{$this->reefine->dbprefix}publisher_titles.title";
+		else
+			return "{$this->reefine->dbprefix}publisher_data.{$this->db_column}";
 	}
 	
 	function get_title_column() {
@@ -1554,10 +1560,16 @@ class Reefine_field_publisher extends Reefine_field {
 	}
 	
 	function get_join_sql() {
-		return "LEFT OUTER JOIN {$this->reefine->dbprefix}publisher_data " .
+		$joins = array( "LEFT OUTER JOIN {$this->reefine->dbprefix}publisher_data " .
 		"ON {$this->reefine->dbprefix}publisher_data.entry_id = {$this->channel_data_alias}.entry_id " .
-		"AND {$this->reefine->dbprefix}publisher_data.publisher_status IN ('', " . $this->reefine->db->escape($this->reefine->status) . ") " .
-		"AND {$this->reefine->dbprefix}publisher_data.publisher_lang_id = {$this->session_language_id} ";
+		"AND " . $this->reefine->get_status_where_clause($this->reefine->status,"{$this->reefine->dbprefix}publisher_data.publisher_status") .
+		"AND {$this->reefine->dbprefix}publisher_data.publisher_lang_id = {$this->session_language_id} ");
+		if ($this->db_column=='title')
+			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}publisher_titles " .
+			"ON {$this->reefine->dbprefix}publisher_titles.entry_id = {$this->channel_data_alias}.entry_id " .
+			"AND " . $this->reefine->get_status_where_clause($this->reefine->status,"{$this->reefine->dbprefix}publisher_titles.publisher_status") . 
+			"AND {$this->reefine->dbprefix}publisher_titles.publisher_lang_id = {$this->session_language_id} ";
+		return $joins;
 	}
 	
 }
