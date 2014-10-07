@@ -1019,8 +1019,18 @@ class Reefine {
 	
 	
 	private function urlencode($value) {
-		// EE can't stand question marks in the url, even if they're encoded so put an @ followed by the char HEX code to decode laters
-		return strtr(urlencode($value), array('%3F'=> '%403F', '%40'=>'%4040'));
+		// EE gives the error "The URI you submitted has disallowed characters." to a lot of special chars
+		// even if they're encoded so put an @ followed by the char HEX code to decode laters, eg when decoded ? will look like @3F
+		return strtr(urlencode($value), array(
+				'%3F' => '%403F', // ? 
+				'%40' => '%4040', // @
+				'%2F' => '%402F', // /
+				'%5C' => '%405C', // \
+				'%3E' => '%403E', // >
+				'%3C' => '%403C', // <
+				'%7B' => '%407B', // {
+				'%7D' => '%407D', // }
+		));
 	}
 	
 	public function create_url($url)
