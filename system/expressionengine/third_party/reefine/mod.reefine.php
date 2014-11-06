@@ -310,7 +310,8 @@ class Reefine {
 			if (isset($this->EE->uri->config->_global_vars['freebie_original_uri'])) {
 				$this->url = $this->EE->uri->config->_global_vars['freebie_original_uri'];
 			} else {
-				$this->url = $this->EE->router->uri->uri_string;
+				//$this->url = $this->EE->router->uri->uri_string;
+				$this->url = $this->EE->uri->uri_string();
 			}
 			if (strpos($this->url,'/')!==0)
 				$this->url = '/'.$this->url;
@@ -1030,6 +1031,7 @@ class Reefine {
 				'%3C' => '%403C', // <
 				'%7B' => '%407B', // {
 				'%7D' => '%407D', // }
+				'%2B' => '%402B' // +
 		));
 	}
 	
@@ -1064,6 +1066,15 @@ class Reefine {
 			}
 			return $result;
 		} else {
+			
+			// Do the reverse of _filter_uri() function in system/codeigniter/core/system/URI.php
+			// Convert entities back to programatic characters 
+			$bad	= array('$',		'(',		')',		'%28',		'%29');
+			$good	= array('&#36;',	'&#40;',	'&#41;',	'&#40;',	'&#41;');
+			//  go from good to bad.
+			$value = str_replace($good, $bad, $value);
+				
+			
 			return urldecode(str_replace('@','%',str_replace('%40','%',$value)));
 		}
 	}
