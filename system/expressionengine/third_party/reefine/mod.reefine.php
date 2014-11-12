@@ -1464,6 +1464,7 @@ class Reefine_field {
 			return null;
 	}
 	
+	// get an attribute of a field (eg is_title_field)
 	function get_field_by_key($field_name,$key) {
 		$field = $this->get_field_by_name($field_name);
 		return $field[$key];
@@ -1578,8 +1579,8 @@ class Reefine_field_publisher extends Reefine_field {
 	}
 	
 	function get_value_column() {
-		if ($this->db_column=='title')
-			return "{$this->table_alias_titles}.title";
+		if ($this->get_field_by_key($this->field_name,'is_title_field')) // if it's a column that's normally in channel_titles
+			return "{$this->table_alias_titles}." . $this->db_column;
 		else
 			return "{$this->table_alias_data}.{$this->db_column}";
 	}
@@ -1593,7 +1594,7 @@ class Reefine_field_publisher extends Reefine_field {
 		"ON {$this->table_alias_data}.entry_id = {$this->channel_data_alias}.entry_id " .
 		"AND " . $this->reefine->get_status_where_clause($this->reefine->status,"{$this->table_alias_data}.publisher_status") .
 		"AND {$this->table_alias_data}.publisher_lang_id = {$this->session_language_id} ");
-		if ($this->db_column=='title')
+		if ($this->get_field_by_key($this->field_name,'is_title_field')) // if it's a column that's normally in channel_titles
 			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}publisher_titles {$this->table_alias_titles} " .
 			"ON {$this->table_alias_titles}.entry_id = {$this->channel_data_alias}.entry_id " .
 			"AND " . $this->reefine->get_status_where_clause($this->reefine->status,"{$this->table_alias_titles}.publisher_status") . 
@@ -3169,7 +3170,7 @@ class Reefine_group_month_list extends Reefine_group_list {
 						if (!isset($this->filters[$current->format('Y-m-d')])) {
 							$this->filters[$current->format('Y-m-d')] = array(
 								'filter_value' => $current->format('Y-m-d'),
-								'filter_title' => $current->format('F Y'),
+								'filter_title' => $this->reefine->EE->localize->format_date('%F %Y', $current->getTimestamp()), // format using EE
 								'filter_id' => '',
 								'filter_quantity' => $row['filter_quantity']
 							);
