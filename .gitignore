@@ -16,6 +16,8 @@
 !system/expressionengine/third_party/reefine/*
 !system/expressionengine/third_party/reefine/*/*
 !system/expressionengine/third_party/reefine/*/*/*
-
+!docs
+!docs/*
+!docs/*/*
 
 
