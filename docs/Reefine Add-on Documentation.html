@@ -115,6 +115,12 @@ url=&quot;mypage/{title}/{colour}&quot;</code></p>
 <p><code>url=&quot;buy-some-{colour|delightful}-{title|things}-today&quot;</code></p>
 <p>&nbsp;</p>
 <p class="important"><strong>Important:</strong>&nbsp; If you are using method=&quot;url&quot; (default) then this is required and all filter groups must be specified in the url.</p>
+<h3>url_output</h3>
+<p>Default: same as &quot;url&quot; parameter</p>
+<p>Use this if you need to specify a different url for output to links. This is useful if you want to link to a new page on filtering or if you're using a language indicator in the first segment that isn't sent through to expressionengine. Reefine will still use the &quot;url&quot; parameter to get the current filter values.</p>
+<p><code>url=&quot;/{colour}/{price}&quot;<br />
+  url_output=&quot;/shop/{colour}/{price}&quot;<br />
+</code></p>
 <h3>theme</h3>
 <p>You can specify a theme to use which will output the filters selectors to save you having to create them yourself. Themes are found in the /themes/third_party/reefine folder. Reefine comes with the themes &quot;shop&quot; and &quot;form&quot;. The &quot;form&quot; theme is compatible with all <a href="#method">methods</a> whereas the &quot;shop&quot; theme is compatible with all methods except for method=&quot;post&quot;.</p>
 <p><code>theme=&quot;shop&quot;</code></p>
@@ -147,13 +153,25 @@ url=&quot;/products/{product_type}/{size}/{colour}/{price}/{title}&quot;}<br />
 <h3>search:<em>field name</em></h3>
 <p>You can search by a particular field value or the title. This works in the same way as the channel:entries tag. Please refer to the documentation on <a href="http://expressionengine.com/user_guide/modules/channel/channel_entries.html#search-field-name">search:field_name for channel entries </a>in the ExpressionEngine documentation. Additionally you can use this to search the title with search:title=&quot;abc&quot;.</p>
 <p><code>search:colour=&quot;red&quot;</code></p>
+<h3>category<em></em></h3>
+<p>This parameter will limit all your entries to a particular category by it's category ID. You can include multiple categories seperated by pipe &quot;|&quot;.</p>
+<p><code>category=&quot;2|3&quot;</code></p>
+<h3></h3>
 <h3>category<em></em>_url</h3>
-<p>This parameter will limit all your entries to a particular category. This uses the category url title.</p>
+<p>This parameter will limit all your entries to a particular category. This uses the category url title. </p>
 <p><code>category_url=&quot;{segment_2}&quot;</code></p>
+<h3>show_expired</h3>
+<p>Default: no</p>
+<p>Show expired entries. You will also need to add this to your {exp:channel:entries} tag.</p>
+<p><code>show_expired=&quot;yes&quot;</code></p>
+<h3>show_future_entries</h3>
+<p>Default: no</p>
+<p>Show entries with an entry date that is in the future. You will also need to add this to your {exp:channel:entries} tag.</p>
+<p><code>show_future_entries=&quot;yes&quot;</code></p>
 <h3>status</h3>
 <p>Default: open</p>
-<p>This will limit the entries by their status. </p>
-<p><code>status=&quot;featured&quot;</code></p>
+<p>This will limit the entries by their status. Multiple statuses are seperated by a pipe character &quot;|&quot;.</p>
+<p><code>status=&quot;featured|on_offer&quot;</code></p>
 <p class="important"><strong>Important:</strong>&nbsp;The containing exp:channel:entries tag will also need to have the same status tag, otherwise the filter and search results will differ.</p>
 <h3></h3>
 <h3>filter:fields</h3>
@@ -225,9 +243,6 @@ filter:month:where_after=&quot;{current_time}&quot;<br />
 </ul>
 <p>This allows you specify how multiple filters are treated. If the join is <strong>or</strong> reefine will show an entry if it matches at least one filter in the filter group. If the join is<strong> and </strong>reefine will show an entry if it matches all filters in the filter group. If the join is <strong>none</strong> reefine will only allow the user to select one filter for that filter group. </p>
 <p><code>filter:colour:join=&quot;or&quot;</code></p>
-<p></p>
-<p></p>
-<p></p>
 <h3>filter:<em>filter group:</em>orderby</h3>
 <p>This specifies the order that the filters are displayed in the filter group. Possible values are:</p>
 <ul>
@@ -235,10 +250,17 @@ filter:month:where_after=&quot;{current_time}&quot;<br />
   <li>quantity (order by the quantity of matching entries for filter, most to least)</li>
   <li>active (put active filters at top and order the rest alphabetically)</li>
   <li>active_quantity (put active filters at top and order the rest by quantity)</li>
-</ul>
-<p><code>filter:colour:orderby=&quot;active_quantity&quot;</code></p>
+  </ul>
+<p>You can also specify a pipe &quot;|&quot; seperated list of filter values to set your own custom order.</p>
+<p><code>filter:colour:orderby=&quot;active_quantity&quot;<br />
+  filter:city:orderby=&quot;london|bristol|cheltenham|plymouth&quot;
+      
+</code></p>
 <p></p>
-<p></p>
+<h3>filter:<em>filter group:</em>sort</h3>
+<p>Default: asc</p>
+<p>This specifies the direction of order that the filters are displayed in the filter group. It can be &quot;asc&quot; for ascending or &quot;desc&quot; for decending.</p>
+<p><code>filter:colour:sort=&quot;desc&quot;</code></p>
 <p></p>
 <h3>filter:<em>filter group</em>:category_group</h3>
 <p>Filter by categories by specifying a category group. This is a pipe | seperated list of category IDs. In the same way the fields parameters works you can specify a list of categories. For example if I have a category group for departments with the ID 2 I can filter by the departments.</p>
@@ -308,11 +330,13 @@ filter:month:where_after=&quot;{current_time}&quot;<br />
 <h3>{list_groups} &raquo; {total_filters}</h3>
 <p>Total number of possible filters in filter group</p>
 <p><code>{list_groups}{if total_filters &gt; 0}...{/if}{/list_groups}</code></p>
-<p></p>
-<p></p>
 <h3>{list_groups} &raquo; {active_filters}</h3>
+<p>Total number of filters that have have been selected by the user.</p>
+<p><code>{list_groups}Filtering by {active_filters} filters.{/list_groups}</code></p>
+<p></p>
+<h3>{list_groups} &raquo; {matching_filters}</h3>
 <p>Total number of filters that have at least one matching entry.</p>
-<p><code>{list_groups}{if active_filters &gt; 0}...{if:else}No filters match{/if}{/list_groups}</code></p>
+<p><code>{list_groups}{if matching_filters &gt; 0}...{if:else}No filters match{/if}{/list_groups}</code></p>
 <p></p>
 <p></p>
 <h3>{list_groups} &raquo; {clear_url}</h3>
@@ -324,8 +348,14 @@ filter:month:where_after=&quot;{current_time}&quot;<br />
 <p>This variable pair will contain your list of possible filter values for the filter group.</p>
 <h3></h3>
 <p></p>
+<h3>{list_groups} &raquo; {filters} &raquo; {filter_id}</h3>
+<p>For categories this will be the category ID. For all other field types this is blank.</p>
+<p><code>{list_groups}&lt;ul&gt;{filters}&lt;li&gt;&lt;a href=&quot;{url}&quot;&gt;<br />
+  {exp:channel:categories id=&quot;<strong>{filter_id}</strong>&quot;}{category_image}{/exp:channel:categories}<br />  &lt;/a&gt;&lt;/li&gt;{/filters}&lt;/ul&gt;{/list_groups}</code></p>
+<p></p>
+<h3></h3>
 <h3>{list_groups} &raquo; {filters} &raquo; {filter_value}</h3>
-<p>This is the possible filter value, which is used in the URL. For categories this will be the category url title.</p>
+<p>This is the possible filter value, which is used in the URL. For categories this will be the category url title. For relationship fields this will be the url_title of the entry.</p>
 <p><code>{list_groups}&lt;ul&gt;{filters}&lt;li&gt;&lt;a href=&quot;{url}&quot;&gt;<strong>{filter_value}</strong>&lt;/a&gt;&lt;/li&gt;{/filters}&lt;/ul&gt;{/list_groups}</code></p>
 <p></p>
 <h3>{list_groups} &raquo; {filters} &raquo; {filter_title}</h3>
@@ -416,6 +446,8 @@ value=&quot;{filter_title}&quot; title=&quot;Search ({filter_quantity})&quot; /&
 <h2>{filter_groups} Variable Pair</h2>
 <p>This variable pair will output all filters regardless of type. The variables available depend on what type the group is.</p>
 <h2>Change Log</h2>
+<h3>Version 1.5</h3>
+<p>&nbsp;</p>
 <h3>Version 1.4</h3>
 <p>Release 11/12/2013</p>
 <ul>
@@ -467,7 +499,7 @@ value=&quot;{filter_title}&quot; title=&quot;Search ({filter_quantity})&quot; /&
 <h3>Structure</h3>
 <p>Reefine is compatible with <a href="http://buildwithstructure.com/">Structure</a>. However you will need to add the <a href="http://devot-ee.com/add-ons/freebie">Freebie</a> add-on so that the page will still display. You will need to add your page's segments to Freebie so Structure displays the correct page. Reefine will modify the page's URI string back to how it was before Freebie after processing to ensure EE's native paging still works.</p>
 <h3>Expresso Store</h3>
-<p>Reefine is compatible with the <a href="http://devot-ee.com/add-ons/expresso-store" target="_blank">Expresso Store</a> fieldtype. You can access the details of a product by specify the field name in the same way as in the template eg if your field of fieldtype Store is called &quot;product&quot; and you wanted to get the price you would use filter:<em>filter group</em>:fields=&quot;product:price&quot;. Please note it can only retrive the values from the <strong>exp_store_products</strong> database table so it will not be able to add tax or shipping.</p>
+<p>Reefine is compatible with the <a href="http://devot-ee.com/add-ons/expresso-store" target="_blank">Expresso Store</a> fieldtype. You can access the details of a product by specify the field name in the same way as in the template eg if your field of fieldtype Store is called &quot;product&quot; and you wanted to get the price you would use filter:<em>filter group</em>:fields=&quot;product:price&quot;. Please note it can only retrive the values from the <strong>exp_store_products</strong> database table so it will not be able to add tax or shipping. To filter by what's on sale use filter:<em>filter group</em>:fields=&quot;product:on_sale&quot;.</p>
 <h3>Relationship &amp; Playa fieldtypes</h3>
 <p>Reefine is compatible with the Relationship fieldtype and <a href="http://devot-ee.com/add-ons/playa">Pixel and Tonic's Playa fieldtype</a>. Both work in the same way. Just enter the field name and the filter will show the related entry's title and use the url_title for the url. For example:</p>
 <p><code>channel=&quot;films&quot; <br />
