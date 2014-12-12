@@ -21,10 +21,10 @@
 		<h3>Selected Criteria</h3>
 		<ul>
 		{active_groups}
-			<li><strong><a class="remove-filter" href="{clear_url}">{label}:</a></strong></li>
+			<li><strong><a class="remove-filter" href="{clear_url}" rel="nofollow">{label}:</a></strong></li>
 			{filters}
 				<li class="{filter_active_class}">
-				<a href="{url}" aria-selected="{filter_active_boolean}">{filter_title}</a>
+				<a href="{url}" aria-selected="{filter_active_boolean}" rel="nofollow">{filter_title}</a>
 				</li>
 				<!-- {filter_min_value}{filter_max_value}{filter_quantity}{filter_id} -->
 			{/filters}
@@ -39,7 +39,7 @@
 				<ul>
 				{filters}
 					<li class="{filter_active_class} filter-id-{filter_id}">
-					<a href="{url}" aria-selected="{filter_active_boolean}">{filter_title} ({filter_quantity})</a>
+					<a href="{url}" aria-selected="{filter_active_boolean}" rel="nofollow">{filter_title} ({filter_quantity})</a>
 					</li>
 				{/filters}
 				</ul>

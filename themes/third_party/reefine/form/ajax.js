@@ -34,7 +34,7 @@
 			html = JSON.parse(response);
 		else
 			eval('html=' + response);
-		document.getElementById('reefine').innerHTML = html;
+		document.getElementById('reefine_form').innerHTML = html;
 		// remove loading css class
 		container.className = container.className.replace(/\bloading\b/, '');
 		reefine_ajax_init();
