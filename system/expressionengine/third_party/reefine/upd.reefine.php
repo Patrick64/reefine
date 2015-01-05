@@ -2,7 +2,7 @@
 
 class Reefine_upd {
 
-    var $version        = '1.4.2';
+    var $version        = '1.5.0';
 
     function Reefine_upd()
     {
@@ -55,6 +55,17 @@ class Reefine_upd {
 		return TRUE;
 	}
 
+	/**
+	 * https://ellislab.com/expressionengine/user-guide/development/module_tutorial.html
+	 *
+	 * @access	public
+	 * @return	bool
+	 */
+	function update($current='')
+	{
+	
+		return TRUE;
+	}
     
 
 }
