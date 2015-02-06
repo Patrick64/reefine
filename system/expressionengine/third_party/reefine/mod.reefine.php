@@ -3124,9 +3124,11 @@ class Reefine_group_search extends Reefine_group {
 }
 
 class Reefine_group_tree extends Reefine_group_list {
+	public $type = 'tree';
 	function __construct($reefine,$group_name) {
 		parent::__construct($reefine,$group_name);
 	}
+	
 	function set_filters() {
 		$this->filters = array();
 		// for each field in the filter group
@@ -3153,8 +3155,8 @@ class Reefine_group_tree extends Reefine_group_list {
 	
 		$this->set_filter_totals();
 		// sort filters on orderby
-		$this->sort_filters();
-		$this->set_filter_depths();
+		//$this->sort_filters();
+		//$this->set_filter_depths();
 	
 	
 	}
@@ -3225,7 +3227,93 @@ class Reefine_group_tree extends Reefine_group_list {
 		unset($filter);
 	}
 	
+	/**
+	 * Get array of group values formatted for output with array of filters.
+	 * @param string $only_show_active If true only returns active filters
+	 * @return array
+	 */
+	function get_filters_for_output($only_show_active = false) {
+		$group = array();
+	
+		// get attributes of group
+		foreach (get_object_vars($this) as $key => $val) {
+			if (is_string($val)) {
+				$group[$key] = htmlspecialchars($val, ENT_QUOTES);
+			}
+		}
+	
+		// format filters for output
+		$group['filters'] = array();
+		$group['active_filters'] = $this->active_filters;
+		$group['total_filters'] = $this->total_filters;
+		$group['matching_filters'] = $this->matching_filters;
+		$filter_values = array();
+		foreach ($this->values as $filter_value) {
+			$filter_values[] = array('value'=>$filter_value);
+		}
+		$group['active_filter_values'] = $filter_values;
+	
+		$group['filters'] = $this->get_subfilters_for_output($only_show_active,0,0);
+		
+		return $group;
+	}
+	
+	private function get_subfilters_for_output($only_show_active,$parent_id,$level) {
+		$output_filters = array();
+		foreach ($this->filters as $filter_key => $filter) {
+			
+			if ($filter['parent_id']==$parent_id) {
+
+				$filter_active = $filter['filter_active'];
+				$filter_quantity = $filter['filter_quantity'];
+					
+				// Check that - if only show active then only show if active ALSO if hide empty filters then only show if filter is not empty or is active
+				if ( (!$only_show_active || $filter_active) &&
+				($this->show_empty_filters || $filter_active || $filter_quantity>0) )  {
+			
+					$filter_out = array();
+			
+					if ($filter['filter_active'])
+						$active_index += 1;
+					// used for formatting
+					//$filter_out['active_index'] = $active_index;
+					$filter_out['filter_active_class'] = ( $filter_active ? 'active' : 'inactive' );
+					$filter_out['filter_active_boolean'] = ( $filter_active ? 'true' : 'false' );
+			
+					// stop xss
+					foreach ($filter as $key => $val) {
+						$filter_out[$key] = htmlspecialchars($val, ENT_QUOTES);
+					}
+			
+					// number range doessome stuff
+					$this->format_filter_for_output($filter,$filter_out);
+					
+					// if level 2 or more then add _2, _3... to end of value coz of EE's rubbish templateparsing 
+					if ($level>0) {
+						$filter_out2 = array();
+						foreach ($filter_out as $key => $val) {
+							$filter_out2[$key . '_' . $level] = $val;
+						} 
+						$filter_out = $filter_out2;
+						unset($val);
+					}
+					
+					$subfilters = $this->get_subfilters_for_output($only_show_active, $filter['filter_id'],$level+1);
+					
+					if (count($subfilters)>0)
+						$filter_out['subfilters_' . ($level+1)] = array(array('filters_' . ($level+1) =>$subfilters));
+					else
+						$filter_out['subfilters_' . ($level+1)] = array();
+					$output_filters[] = $filter_out;
+				}
+			}
+		}
+		return $output_filters;
+			
+	}	
+	
 }
+
 
 class Reefine_group_month_list extends Reefine_group_list {
 	public $type = 'list';

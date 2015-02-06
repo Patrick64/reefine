@@ -263,3 +263,7 @@ select.reefine_multiple {
 	background:#000;
 	color:#fff;
 }
+
+.reefine .reefine_tree {}
+.reefine .reefine_tree ul {}
+.reefine .reefine_tree ul li { padding: 0 0 0 1em; }
