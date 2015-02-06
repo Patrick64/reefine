@@ -1580,11 +1580,11 @@ class Reefine_field_publisher extends Reefine_field {
 	
 	function get_value_column() {
 		if ($this->get_field_by_key($this->field_name,'is_title_field')) // if it's a column that's normally in channel_titles
-			return "{$this->table_alias_titles}." . $this->db_column;
+			return "IFNULL( {$this->table_alias_titles}.{$this->db_column} , {$this->channel_titles_alias}.{$this->db_column}) " ;
 		else
-			return "{$this->table_alias_data}.{$this->db_column}";
+			return "IFNULL( {$this->table_alias_data}.{$this->db_column} , {$this->channel_data_alias}.{$this->db_column}) ";
 	}
-	
+		
 	function get_title_column() {
 		return $this->get_value_column();
 	}
@@ -2106,6 +2106,8 @@ class Reefine_group {
 		$this->reefine->add_filter_group_setting($this, 'sort', 'asc', 'text');
 		$this->reefine->add_filter_group_setting($this, 'category_group', array(), 'array');
 		$this->reefine->add_filter_group_setting($this, 'show_empty_filters', false, 'bool');
+		$this->reefine->add_filter_group_setting($this, 'custom_values', false, 'array');
+		$this->reefine->add_filter_group_setting($this, 'custom_titles', false, 'array');
 			
 		if (count($this->category_group)>0) {
 			$this->cat_group_in_list = $this->reefine->array_to_in_list($this->category_group);
@@ -2494,6 +2496,12 @@ class Reefine_group {
 		$group['active_filters'] = $this->active_filters;
 		$group['total_filters'] = $this->total_filters;
 		$group['matching_filters'] = $this->matching_filters;
+		$filter_values = array();
+		foreach ($this->values as $filter_value) {
+			$filter_values[] = array('value'=>$filter_value);
+		}
+		$group['active_filter_values'] = $filter_values;
+		
 		$active_index = 0;
 		foreach ($this->filters as $filter_key => $filter) {
 			$filter_active = $filter['filter_active'];
@@ -2532,6 +2540,7 @@ class Reefine_group {
 	
 	public function get_where_clause() {
 		//abstract
+		return array();
 	}
 	
 	public function set_filters() {
@@ -2558,6 +2567,30 @@ class Reefine_group {
 		}
 	}
 	
+	function add_custom_filters() {
+	
+		if ($this->custom_values) {
+			$custom_filers = array();
+			foreach ($this->custom_values as $i => $value) {
+				$filter_title = ($this->custom_titles && isset($this->custom_titles[$i])) ? $this->custom_titles[$i] : $value;
+				$this->filters[] = array(
+						'filter_value' => $value,
+						'filter_title' => $filter_title,
+						'filter_id' => 0,
+						'filter_quantity' => 1
+				);
+			}
+		}
+	}
+	
+	
+}
+
+class Reefine_group_dummy extends Reefine_group {
+	public $type = 'dummy';
+	public function __construct($reefine,$group_name) {
+		parent::__construct($reefine,$group_name);
+	}
 }
 
 class Reefine_group_list extends Reefine_group {
@@ -2593,13 +2626,14 @@ class Reefine_group_list extends Reefine_group {
 		}
 		
 		// set totals for use in templates
-		
+		$this->add_custom_filters();
 		$this->set_filter_totals();
 		// sort filters on orderby
 		$this->sort_filters();
 		
 		
 	}
+	
 	
 	protected function get_filter_count_statement() {
 		// if group is multi select then ignore the current filter group in creating the where clause
@@ -2694,7 +2728,7 @@ class Reefine_group_list extends Reefine_group {
 				if (count($this->category_group)>0)
 					$field_list[] = " ( cat_{$this->group_name}.cat_url_title IN (" . implode(',',$in_list) . ") AND cat_{$this->group_name}.group_id IN {$this->cat_group_in_list})";
 	
-				$clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
+				if ($field_list)  $clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
 			} else {
 				$field_list = array();
 				foreach ($in_list as $value) {
@@ -2712,7 +2746,7 @@ class Reefine_group_list extends Reefine_group {
 					$field_list[] = "\n(" . implode("\n OR ",$value_list) . ")";
 				}
 	
-				$clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
+				if ($field_list) $clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
 			}
 	
 		} else {
@@ -2728,7 +2762,7 @@ class Reefine_group_list extends Reefine_group {
 				if (count($this->category_group)>0)
 					$field_list[] = " ( cat_{$this->group_name}.cat_url_title IN (" . implode(',',$in_list) . ") AND cat_{$this->group_name}.group_id IN {$this->cat_group_in_list})";
 	
-				$clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
+				if ($field_list) $clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
 			} else {
 				// field is not multi select. create an sql query with this format:
 				// ( ( field1 = value1 OR field2 = value1 ) AND (field1 = value2 OR field2 = value2) )
@@ -2750,7 +2784,7 @@ class Reefine_group_list extends Reefine_group {
 	
 					$field_list[] = "(" . implode(" OR ",$value_list) . ")";
 				}
-				$clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
+				if ($field_list) $clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
 			}
 		}
 	
