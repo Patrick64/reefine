@@ -21,7 +21,7 @@
 			// get parameters
 			params = serialize(document.getElementById('reefine_form'));
 
-			var url = document.getElementById('reefine_form').action;
+			var url = window.location.pathname;
 			AJAXPost(url + '?' + params + "&ajax_request=1", ajax_success);
 			return false;
 		};
@@ -59,7 +59,6 @@
 		};
 
 		xmlhttp.open("GET", url, true);
-		xmlhttp.setRequestHeader("content-type", "application/x-www-form-urlencoded");
 		// xmlhttp.setRequestHeader("content-length", params.length);
 		// xmlhttp.setRequestHeader("connection", "close");
 
