@@ -21,7 +21,7 @@
 			// get parameters
 			params = serialize(document.getElementById('reefine_form'));
 
-			var url = document.getElementById('reefine_form').action;
+			var url = window.location.pathname;
 			AJAXPost(url + '?' + params + "&ajax_request=1", ajax_success);
 			return false;
 		};
@@ -34,7 +34,7 @@
 			html = JSON.parse(response);
 		else
 			eval('html=' + response);
-		document.getElementById('reefine').innerHTML = html;
+		document.getElementById('reefine_form').innerHTML = html;
 		// remove loading css class
 		container.className = container.className.replace(/\bloading\b/, '');
 		reefine_ajax_init();
@@ -59,7 +59,6 @@
 		};
 
 		xmlhttp.open("GET", url, true);
-		xmlhttp.setRequestHeader("content-type", "application/x-www-form-urlencoded");
 		// xmlhttp.setRequestHeader("content-length", params.length);
 		// xmlhttp.setRequestHeader("connection", "close");
 

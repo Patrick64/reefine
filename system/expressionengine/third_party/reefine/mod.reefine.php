@@ -310,7 +310,8 @@ class Reefine {
 			if (isset($this->EE->uri->config->_global_vars['freebie_original_uri'])) {
 				$this->url = $this->EE->uri->config->_global_vars['freebie_original_uri'];
 			} else {
-				$this->url = $this->EE->router->uri->uri_string;
+				//$this->url = $this->EE->router->uri->uri_string;
+				$this->url = $this->EE->uri->uri_string();
 			}
 			if (strpos($this->url,'/')!==0)
 				$this->url = '/'.$this->url;
@@ -1019,8 +1020,19 @@ class Reefine {
 	
 	
 	private function urlencode($value) {
-		// EE can't stand question marks in the url, even if they're encoded so put an @ followed by the char HEX code to decode laters
-		return strtr(urlencode($value), array('%3F'=> '%403F', '%40'=>'%4040'));
+		// EE gives the error "The URI you submitted has disallowed characters." to a lot of special chars
+		// even if they're encoded so put an @ followed by the char HEX code to decode laters, eg when decoded ? will look like @3F
+		return strtr(urlencode($value), array(
+				'%3F' => '%403F', // ? 
+				'%40' => '%4040', // @
+				'%2F' => '%402F', // /
+				'%5C' => '%405C', // \
+				'%3E' => '%403E', // >
+				'%3C' => '%403C', // <
+				'%7B' => '%407B', // {
+				'%7D' => '%407D', // }
+				'%2B' => '%402B' // +
+		));
 	}
 	
 	public function create_url($url)
@@ -1054,6 +1066,15 @@ class Reefine {
 			}
 			return $result;
 		} else {
+			
+			// Do the reverse of _filter_uri() function in system/codeigniter/core/system/URI.php
+			// Convert entities back to programatic characters 
+			$bad	= array('$',		'(',		')',		'%28',		'%29');
+			$good	= array('&#36;',	'&#40;',	'&#41;',	'&#40;',	'&#41;');
+			//  go from good to bad.
+			$value = str_replace($good, $bad, $value);
+				
+			
 			return urldecode(str_replace('@','%',str_replace('%40','%',$value)));
 		}
 	}
@@ -1325,27 +1346,40 @@ class Reefine {
 	 * @return Reefine_field
 	 */
 	function get_field_obj($field_name) {
+		// string to append on class name (eg _relationship )
+		$class_append = '';
+		// the actual field name in ee
+		$ee_field_name = $field_name;
+		// child field name for fields that have a subfield
+		$child_field = '';
+		$field_type='';
+		
 		// if field name conmtains a colon
 		if (strpos($field_name,':')!==false) {
 			list($ee_field_name,$child_field) = explode(':', $field_name);
 			$field_type = $this->_custom_fields[$this->site][$ee_field_name]['field_type'];
-			$field_class = 'Reefine_field_' . $field_type;
-			if (class_exists($field_class)) {
-				return new $field_class($this,$field_name, $ee_field_name,$child_field);
-			} else {
-				throw new Exception('Reefine error: Fieldtype ' . $field_type . ' not supported.');
-			}
-		} else if (isset($this->EE->publisher_model)) {
-			// Publisher module detected so check the publisher fields instead
-			return new Reefine_field_publisher($this,$field_name, $field_name);
+			$class_append = '_' . $field_type;
+			
 		} else {
+			// field doesnt have a colon - lets look at the field type anyway
 			$field_type = $this->_custom_fields[$this->site][$field_name]['field_type'];
-			if ($field_type=='relationship')
-				return new Reefine_field_relationship($this, $field_name, $field_name, '');
-			if ($field_type=='playa')
-				return new Reefine_field_playa($this, $field_name, $field_name, '');
-			else
-				return new Reefine_field($this, $field_name);
+			// if the filter is a relationship/playa field and no subfield is specified then we show the title in the filter
+			if ($field_type=='relationship' || $field_type=='playa')
+				$class_append = '_' . $field_type;
+					
+		}
+			
+		// Publisher module detected so check if a class exists for the publisher fields
+		if (isset($this->EE->publisher_model) && class_exists('Reefine_field_publisher' . $class_append)) {
+			$field_class='Reefine_field_publisher' . $class_append;
+			return new $field_class($this,$field_name, $ee_field_name,$child_field);
+			// publisher module doesn't exist or so just go
+		} else if (class_exists('Reefine_field' . $class_append)) {
+			$field_class='Reefine_field' . $class_append;
+			return new $field_class($this,$field_name, $ee_field_name,$child_field);
+		
+		} else {
+			throw new Exception('Reefine error: Fieldtype "' . $field_type . '" not supported.');
 		}
 	}
 }
@@ -1399,7 +1433,7 @@ class Reefine_field {
 	
 	protected $channel_titles_alias = '';
 	
-	function __construct($reefine, $field_name) {
+	function __construct($reefine, $field_name,$parent_field_name='',$child_field_name='') {
 		
 		$this->reefine = $reefine;
 		$this->field_name = $field_name;
@@ -1441,6 +1475,7 @@ class Reefine_field {
 			return null;
 	}
 	
+	// get an attribute of a field (eg is_title_field)
 	function get_field_by_key($field_name,$key) {
 		$field = $this->get_field_by_name($field_name);
 		return $field[$key];
@@ -1534,31 +1569,48 @@ class Reefine_field_store extends Reefine_field {
 class Reefine_field_publisher extends Reefine_field {
 	
 	private $session_language_id;
+	private $table_alias;
+	private $table_alias_titles;
+	private $table_alias_data;
 	
-	function __construct($reefine,$field_name,$ee_field_name) {
-		parent::__construct($reefine, $ee_field_name);
+	function __construct($reefine,$field_name,$ee_field_name,$child_field_name='') {
+		parent::__construct($reefine, $ee_field_name, '');
 		
 		$this->reefine = $reefine;
 		
 		$this->field_name = $ee_field_name;
 		
-		$this->session_language_id = intval($this->reefine->EE->publisher_model->current_language['id']);
+		$this->session_language_id = intval($this->reefine->EE->publisher_language->current_language['id']);
+		
+		// $this->table_alias = 'relation_' . preg_replace('/[^A-Z0-9]/i','_',$ee_field_name);
+		$this->table_alias_titles = 'relation_' . preg_replace('/[^A-Z0-9]/i','_',$ee_field_name) . '_titles';
+		$this->table_alias_data = 'relation_' . preg_replace('/[^A-Z0-9]/i','_',$ee_field_name) . '_data';
+		
 		
 	}
 	
 	function get_value_column() {
-		return "{$this->reefine->dbprefix}publisher_data.{$this->db_column}";
+		if ($this->get_field_by_key($this->field_name,'is_title_field')) // if it's a column that's normally in channel_titles
+			return "IFNULL( {$this->table_alias_titles}.{$this->db_column} , {$this->channel_titles_alias}.{$this->db_column}) " ;
+		else
+			return "IFNULL( {$this->table_alias_data}.{$this->db_column} , {$this->channel_data_alias}.{$this->db_column}) ";
 	}
-	
+		
 	function get_title_column() {
 		return $this->get_value_column();
 	}
 	
 	function get_join_sql() {
-		return "LEFT OUTER JOIN {$this->reefine->dbprefix}publisher_data " .
-		"ON {$this->reefine->dbprefix}publisher_data.entry_id = {$this->channel_data_alias}.entry_id " .
-		"AND {$this->reefine->dbprefix}publisher_data.publisher_status IN ('', " . $this->reefine->db->escape($this->reefine->status) . ") " .
-		"AND {$this->reefine->dbprefix}publisher_data.publisher_lang_id = {$this->session_language_id} ";
+		$joins = array( "LEFT OUTER JOIN {$this->reefine->dbprefix}publisher_data {$this->table_alias_data} " .
+		"ON {$this->table_alias_data}.entry_id = {$this->channel_data_alias}.entry_id " .
+		"AND " . $this->reefine->get_status_where_clause($this->reefine->status,"{$this->table_alias_data}.publisher_status") .
+		"AND {$this->table_alias_data}.publisher_lang_id = {$this->session_language_id} ");
+		if ($this->get_field_by_key($this->field_name,'is_title_field')) // if it's a column that's normally in channel_titles
+			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}publisher_titles {$this->table_alias_titles} " .
+			"ON {$this->table_alias_titles}.entry_id = {$this->channel_data_alias}.entry_id " .
+			"AND " . $this->reefine->get_status_where_clause($this->reefine->status,"{$this->table_alias_titles}.publisher_status") . 
+			"AND {$this->table_alias_titles}.publisher_lang_id = {$this->session_language_id} ";
+		return $joins;
 	}
 	
 }
@@ -1615,14 +1667,23 @@ class Reefine_field_relationship extends Reefine_field {
 		$joins=array("LEFT OUTER JOIN {$this->reefine->dbprefix}relationships {$this->table_alias} " .
 		"ON {$this->table_alias}.parent_id = {$this->channel_data_alias}.entry_id " .
 		"AND {$this->table_alias}.field_id = {$this->relation_field_id} ");
-		// if we just need the titles for "relation" or "relation:title" fields
-		if ($this->child_field_name=='' || $this->child_field_name=='title')
-			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}channel_titles {$this->table_alias_titles} " .
-			"ON {$this->table_alias_titles}.entry_id = {$this->table_alias}.child_id ";
-		else
+		
+		
+	
+		
+		$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}channel_titles {$this->table_alias_titles} " .
+		"ON {$this->table_alias_titles}.entry_id = {$this->table_alias}.child_id " .
+		"AND " . $this->reefine->get_status_where_clause($this->reefine->status,"{$this->table_alias_titles}.status");
+		
+		// include channel_data only if we need fields from the related entry
+		if ($this->child_field_name!='' && $this->child_field_name!='title') {
 			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}channel_data {$this->table_alias_data} " .
-			"ON {$this->table_alias_data}.entry_id = {$this->table_alias}.child_id ";
+			"ON {$this->table_alias_data}.entry_id = {$this->table_alias_titles}.entry_id ";
+		}
+		
 		return $joins;
+		
+		
 	}
 }
 
@@ -1692,6 +1753,90 @@ class Reefine_field_playa extends Reefine_field {
 		return $this->get_field_by_name($this->parent_field_name);
 	}
 }
+
+
+class Reefine_field_publisher_playa extends Reefine_field {
+
+	private $relation_field_id;
+
+	private $child_field_name;
+	private $parent_field_name;
+	private $table_alias;
+	private $table_alias_titles;
+	private $table_alias_data;
+	private $session_language_id;
+	
+	function __construct($reefine,$field_name,$parent_field_name,$child_field_name) {
+		parent::__construct($reefine, $parent_field_name, '');
+		$dbprefix = $reefine->dbprefix;
+		//$this->channel_data_alias = "{$dbprefix}publisher_data";
+		//$this->channel_titles_alias = "{$dbprefix}publisher_titles";
+		$this->reefine = $reefine;
+
+		$this->relation_field_id = $this->get_field_by_key($parent_field_name, 'field_id');
+
+		$this->parent_field_name = $parent_field_name;
+		$this->child_field_name=$child_field_name;
+
+		$this->table_alias = 'relation_' . preg_replace('/[^A-Z0-9]/i','_',$this->relation_field_id);
+		$this->table_alias_titles = 'relation_' . preg_replace('/[^A-Z0-9]/i','_',$this->relation_field_id) . '_titles';
+		$this->table_alias_data = 'relation_' . preg_replace('/[^A-Z0-9]/i','_',$this->relation_field_id) . '_data';
+
+		$this->session_language_id = intval($this->reefine->EE->publisher_language->current_language['id']);
+		
+
+	}
+
+	function get_value_column() {
+		if ($this->child_field_name=='')
+			// Return url_title so we get a nice url for list filters
+			return "{$this->table_alias_titles}.url_title";
+		else if ($this->child_field_name=='title')
+			// return full title, good for search filters
+			return "{$this->table_alias_titles}.title";
+		else
+			// return column data
+			return "{$this->table_alias_data}." . $this->get_field_by_key($this->child_field_name,'field_column');
+	}
+
+	function get_title_column() {
+		if ($this->child_field_name=='' || $this->child_field_name=='title')
+			return "{$this->table_alias_titles}.title";
+		else
+			return "{$this->table_alias_data}." . $this->get_field_by_key($this->child_field_name,'field_column');
+	}
+
+	function get_join_sql() {
+		// more joins than you thought humanly possible
+		$joins = array();
+		// join the publisher table
+		$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}publisher_data " .
+		"ON {$this->reefine->dbprefix}publisher_data.entry_id = {$this->channel_data_alias}.entry_id " .
+		"AND {$this->reefine->dbprefix}publisher_data.publisher_status IN ('', " . $this->reefine->db->escape($this->reefine->status) . ") " .
+		"AND {$this->reefine->dbprefix}publisher_data.publisher_lang_id = {$this->session_language_id} ";
+		// join the playa relationship table 
+		$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}playa_relationships {$this->table_alias} " .
+		"ON {$this->table_alias}.parent_entry_id = {$this->reefine->dbprefix}publisher_data.entry_id " .
+		"AND {$this->table_alias}.parent_field_id = {$this->relation_field_id} " .
+		"AND {$this->table_alias}.publisher_lang_id = {$this->session_language_id} " .
+		"AND {$this->table_alias}.publisher_status = 'open' ";
+		// if we just need the titles for "relation" or "relation:title" fields
+		if ($this->child_field_name=='' || $this->child_field_name=='title')
+			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}publisher_titles {$this->table_alias_titles} " .
+			"ON {$this->table_alias_titles}.entry_id = {$this->table_alias}.child_entry_id " .
+			"AND {$this->table_alias_titles}.publisher_lang_id = {$this->session_language_id} ";
+		else
+			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}publisher_data {$this->table_alias_data} " .
+			"ON {$this->table_alias_data}.entry_id = {$this->table_alias}.child_entry_id " .
+			"AND {$this->table_alias_data}.publisher_lang_id = {$this->session_language_id} ";
+		return $joins;
+	}
+
+	function get_field() {
+		return $this->get_field_by_name($this->parent_field_name);
+	}
+}
+
 
 class Reefine_field_grid extends Reefine_field {
 
@@ -1972,6 +2117,8 @@ class Reefine_group {
 		$this->reefine->add_filter_group_setting($this, 'sort', 'asc', 'text');
 		$this->reefine->add_filter_group_setting($this, 'category_group', array(), 'array');
 		$this->reefine->add_filter_group_setting($this, 'show_empty_filters', false, 'bool');
+		$this->reefine->add_filter_group_setting($this, 'custom_values', false, 'array');
+		$this->reefine->add_filter_group_setting($this, 'custom_titles', false, 'array');
 			
 		if (count($this->category_group)>0) {
 			$this->cat_group_in_list = $this->reefine->array_to_in_list($this->category_group);
@@ -2360,6 +2507,12 @@ class Reefine_group {
 		$group['active_filters'] = $this->active_filters;
 		$group['total_filters'] = $this->total_filters;
 		$group['matching_filters'] = $this->matching_filters;
+		$filter_values = array();
+		foreach ($this->values as $filter_value) {
+			$filter_values[] = array('value'=>$filter_value);
+		}
+		$group['active_filter_values'] = $filter_values;
+		
 		$active_index = 0;
 		foreach ($this->filters as $filter_key => $filter) {
 			$filter_active = $filter['filter_active'];
@@ -2398,6 +2551,7 @@ class Reefine_group {
 	
 	public function get_where_clause() {
 		//abstract
+		return array();
 	}
 	
 	public function set_filters() {
@@ -2424,6 +2578,30 @@ class Reefine_group {
 		}
 	}
 	
+	function add_custom_filters() {
+	
+		if ($this->custom_values) {
+			$custom_filers = array();
+			foreach ($this->custom_values as $i => $value) {
+				$filter_title = ($this->custom_titles && isset($this->custom_titles[$i])) ? $this->custom_titles[$i] : $value;
+				$this->filters[] = array(
+						'filter_value' => $value,
+						'filter_title' => $filter_title,
+						'filter_id' => 0,
+						'filter_quantity' => 1
+				);
+			}
+		}
+	}
+	
+	
+}
+
+class Reefine_group_dummy extends Reefine_group {
+	public $type = 'dummy';
+	public function __construct($reefine,$group_name) {
+		parent::__construct($reefine,$group_name);
+	}
 }
 
 class Reefine_group_list extends Reefine_group {
@@ -2463,13 +2641,14 @@ class Reefine_group_list extends Reefine_group {
 		}
 		
 		// set totals for use in templates
-		
+		$this->add_custom_filters();
 		$this->set_filter_totals();
 		// sort filters on orderby
 		$this->sort_filters();
 		
 		
 	}
+	
 	
 	protected function get_filter_count_statement() {
 		// if group is multi select then ignore the current filter group in creating the where clause
@@ -2577,7 +2756,7 @@ class Reefine_group_list extends Reefine_group {
 				if (count($this->category_group)>0)
 					$field_list[] = " ( cat_{$this->group_name}.cat_url_title IN (" . implode(',',$in_list) . ") AND cat_{$this->group_name}.group_id IN {$this->cat_group_in_list})";
 	
-				$clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
+				if ($field_list)  $clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
 			} else {
 				$field_list = array();
 				foreach ($in_list as $value) {
@@ -2595,7 +2774,7 @@ class Reefine_group_list extends Reefine_group {
 					$field_list[] = "\n(" . implode("\n OR ",$value_list) . ")";
 				}
 	
-				$clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
+				if ($field_list) $clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
 			}
 	
 		} else {
@@ -2611,7 +2790,7 @@ class Reefine_group_list extends Reefine_group {
 				if (count($this->category_group)>0)
 					$field_list[] = " ( cat_{$this->group_name}.cat_url_title IN (" . implode(',',$in_list) . ") AND cat_{$this->group_name}.group_id IN {$this->cat_group_in_list})";
 	
-				$clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
+				if ($field_list) $clauses[] = "\n(" . implode("\n OR ",$field_list) . ")";
 			} else {
 				// field is not multi select. create an sql query with this format:
 				// ( ( field1 = value1 OR field2 = value1 ) AND (field1 = value2 OR field2 = value2) )
@@ -2633,7 +2812,7 @@ class Reefine_group_list extends Reefine_group {
 	
 					$field_list[] = "(" . implode(" OR ",$value_list) . ")";
 				}
-				$clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
+				if ($field_list) $clauses[] = "\n(" . implode("\n AND ",$field_list) . ")";
 			}
 		}
 	
@@ -3155,7 +3334,7 @@ class Reefine_group_month_list extends Reefine_group_list {
 						if (!isset($this->filters[$current->format('Y-m-d')])) {
 							$this->filters[$current->format('Y-m-d')] = array(
 								'filter_value' => $current->format('Y-m-d'),
-								'filter_title' => $current->format('F Y'),
+								'filter_title' => $this->reefine->EE->localize->format_date('%F %Y', $current->getTimestamp()), // format using EE
 								'filter_id' => '',
 								'filter_quantity' => $row['filter_quantity']
 							);
