@@ -34,27 +34,27 @@
 	</div>
 	{/if}
 	<div class="reefine_filters">
-		{category}
+		{tree_groups}
 			<div class="reefine_tree">
 				<h3 class="group_{group_name}">THE CAT {label}</h3>
 				<ul>
 				{filters}
-					<li class="{filter_active_class} filter-id-{filter_id}">
+					<li class="{filter_active_class} filter-id-{filter_id} {has_active_subfilters_class}">
 					<a href="{url}" aria-selected="{filter_active_boolean}" rel="nofollow">{filter_title} ({filter_quantity})</a>
 						{subfilters_1}
 						<ul>
 						{filters_1}
-						<li class="{filter_active_class_1} filter-id-{filter_id_1}">
+						<li class="{filter_active_class_1} filter-id-{filter_id_1} {has_active_subfilters_class_1}">
 						<a href="{url_1}" aria-selected="{filter_active_boolean_1}" rel="nofollow">{filter_title_1} ({filter_quantity_1})</a>
 							{subfilters_2}
 							<ul>
 							{filters_2}
-							<li class="{filter_active_class_2} filter-id-{filter_id_2}">
+							<li class="{filter_active_class_2} filter-id-{filter_id_2} {has_active_subfilters_class_2}">
 							<a href="{url_2}" aria-selected="{filter_active_boolean_2}" rel="nofollow">{filter_title_2} ({filter_quantity_2})</a>
 								{subfilters_3}
 								<ul>
 								{filters_3}
-								<li class="{filter_active_class_3} filter-id-{filter_id_3}">
+								<li class="{filter_active_class_3} filter-id-{filter_id_3} {has_active_subfilters_class_3}">
 								<a href="{url_3}" aria-selected="{filter_active_boolean_3}" rel="nofollow">{filter_title_3} ({filter_quantity_3})</a>
 								</li>
 								{/filters_3}
@@ -72,7 +72,7 @@
 				{/filters}
 				</ul>
 			</div>
-		{/category}
+		{/tree_groups}
 
 		{list_groups}
 				<h3 class="group_{group_name}">{label}</h3>

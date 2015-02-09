@@ -127,9 +127,16 @@ text-decoration:underline;
 }
 
 
-.reefine_sidebar li.active a {
+.reefine_sidebar li.active > a {
 	color:#fff;
 	background: url(reefine-clear.png) no-repeat right center;
+}
+
+.reefine_sidebar li.no-active-subfilters ul ul {
+	display: none;	
+}
+.reefine_tree > ul > li.inactive.no-active-subfilters > ul {
+	display:none;
 }
 
 .reefine_sidebar ul {
@@ -139,6 +146,10 @@ text-decoration:underline;
 .reefine_sidebar li {
 	padding:0;
 	list-style-type:none;
+}
+
+.reefine_tree ul ul {
+	margin:0;
 }
 
 .reefine_active_filters {
