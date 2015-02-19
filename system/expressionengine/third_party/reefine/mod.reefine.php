@@ -587,12 +587,13 @@ class Reefine {
 	/**
 	 * Get SQL for joins that are required.
 	 * @param string $include_group Always include this group in the joins
+	 * @param bool $is_category_join_required Is category join required (eg for the entries search where it may required if the category id is in the where clause)
 	 * @return string
 	 */
-	public function get_query_join_sql($include_group) {
+	public function get_query_join_sql($include_group,$is_category_join_required) {
 		$joins = array();
 		
-		// also left outer join categories
+		// also left outer join categories if the category or category_url
 		if ($this->include_categories)
 			$joins[] = "LEFT OUTER JOIN {$this->dbprefix}category_posts global_catp " .
 			"ON global_catp.entry_id = {$this->dbprefix}channel_data.entry_id \n" .
@@ -604,6 +605,8 @@ class Reefine {
 			// If group has values
 			if ($key==$include_group || (isset($group->values) && count($group->values)>0)) {
 				$joins = array_merge($joins,$group->get_join_sql());
+				if ($is_category_join_required || $group->join=='or' || $group->join=='none' || $include_group==$key)
+					$joins = array_merge($joins,$group->get_category_join_sql());
 			}
 		}
 		// remove duplicates
@@ -616,7 +619,7 @@ class Reefine {
 		"FROM {$this->dbprefix}channel_data ";
 		//if ($this->include_channel_titles)
 		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
-		$sql .= $this->get_query_join_sql('');
+		$sql .= $this->get_query_join_sql('',true);
 		$sql .= ' WHERE 1=1 ';
 
 		// make all the where sql statements for building the query
@@ -1113,6 +1116,7 @@ class Reefine {
 		$tag['search_groups'] = array();
 		$tag['list_groups'] = array();
 		$tag['number_range_groups'] = array();
+		$tag['tree_groups'] = array();
 		$tag['method'] = $this->method;
 		
 		$entry_ids = '';
@@ -2324,6 +2328,11 @@ class Reefine_group {
 			else if ($field_join_sql!='')
 				$joins[] = $field_join_sql;
 		}
+		return $joins;
+	}
+	
+	public function get_category_join_sql() {
+		$joins = array();		
 		if (count($this->category_group) > 0) {
 			$cat_group_in_list = $this->cat_group_in_list;
 			$joins[] = "LEFT OUTER JOIN {$this->dbprefix}category_posts catp_{$this->group_name} " .
@@ -2333,7 +2342,6 @@ class Reefine_group {
 		}
 		return $joins;
 	}
-	
 
 	/**
 	 * This will run through all filters['filter_value'] fields to find a delimiter
@@ -2684,7 +2692,7 @@ class Reefine_group_list extends Reefine_group {
 			
 		//if ($this->include_channel_titles)
 		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
-		$sql .= $this->reefine->get_query_join_sql($this->group_name);
+		$sql .= $this->reefine->get_query_join_sql($this->group_name,false);
 		$sql .= " WHERE {$column_name} <> '' ";
 		if (isset($this->reefine->channel_ids)) {
 			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
@@ -2694,7 +2702,7 @@ class Reefine_group_list extends Reefine_group {
 		// Wrap sql statement in select statement so we can get total of each distinct entry
 		
 		// now wrap in a select that will add all distinct entries together to get {filter_quantity} 
-		$filters_sql = "SELECT filter_value, filter_title, filter_id, count(distinct(entry_id)) as filter_quantity " .
+		$filters_sql = "/* get_filter_groups_for_list({$column_name}..) */ SELECT filter_value, filter_title, filter_id, count(distinct(entry_id)) as filter_quantity " .
 		((count($extra_columns)>0) ? "," . implode(',',array_keys($extra_columns)) : '') . 
 		" FROM ({$sql}) t1 GROUP BY filter_value, filter_id, filter_title " . $order_by;
 		
@@ -2885,7 +2893,7 @@ class Reefine_group_number_range extends Reefine_group {
 		"FROM {$this->dbprefix}channel_data ";
 		//if ($this->include_channel_titles)
 		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
-		$sql .= $this->reefine->get_query_join_sql($this->group_name);
+		$sql .= $this->reefine->get_query_join_sql($this->group_name,false);
 		$sql .= "WHERE 1=1 ";
 		if (isset($this->reefine->channel_ids)) {
 			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
@@ -3418,7 +3426,7 @@ class Reefine_group_month_list extends Reefine_group_list {
 		"FROM {$this->dbprefix}channel_data ";
 		//if ($this->include_channel_titles)
 		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
-		$sql .= $this->reefine->get_query_join_sql($this->group_name);
+		$sql .= $this->reefine->get_query_join_sql($this->group_name,false);
 		$sql .= "WHERE 1=1 ";
 		if (isset($this->reefine->channel_ids)) {
 			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
