@@ -3289,7 +3289,8 @@ class Reefine_group_tree extends Reefine_group_list {
 	private function get_subfilters_for_output($only_show_active,$parent_id,$level) {
 		$output_filters = array();
 		$has_active_filters = false;
-		$has_active_subfilers=false;
+		$has_active_subfilters=false;
+		$active_index=0;
 		foreach ($this->filters as $filter_key => $filter) {
 			
 			if ($filter['parent_id']==$parent_id) {
