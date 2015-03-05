@@ -110,6 +110,12 @@ class Reefine {
 	var $category_url = '';
 	
 	/**
+	 * Whether to change EE's uri variables to fix pagination issues caused by freebie
+	 * @var boolean
+	 */
+	var $fix_pagination = false;
+	
+	/**
 	 * category parameter, see function limit_by_category_ids
 	 * @var string
 	 */
@@ -202,7 +208,7 @@ class Reefine {
 			// change expressione ngin uri so paging works
 			if ($this->method=='url') {
 				if (!$this->disable_search) $this->do_redirects_for_text_inputs();
-				//$this->change_uri_for_paging();
+				if ($this->fix_pagination) $this->change_uri_for_paging();
 			}
 
 			// get the list of possible values to be used
@@ -336,6 +342,11 @@ class Reefine {
 				$filter_values[$group_name] = $group->get_filter_value_from_post();
 			}
 		}
+		// go through each group and call get filter values end just in case the group wants to do anything such as apply a default 
+		foreach ($this->filter_groups as $group_name => &$group) {
+			if (!isset($filter_values[$group_name]) || count($filter_values[$group_name])==0)
+				$filter_values[$group_name] = $group->default;
+		}
 		return $filter_values;
 	}
 
@@ -396,6 +407,8 @@ class Reefine {
 		$this->url_output = $this->EE->TMPL->fetch_param('url_output', $this->url_tag);
 		$this->theme_name = $this->EE->TMPL->fetch_param('theme', '');
 		$this->seperate_filters = ($this->EE->TMPL->fetch_param('seperate_filters', '') == 'yes' ? true : false);
+		$this->fix_pagination = ($this->EE->TMPL->fetch_param('fix_pagination') == 'yes' ? true : false);
+		
 		// get list of channel ids to choose from
 		if (!empty($filter_channel)) {
 			$this->channel_ids = $this->get_channel_ids($filter_channel);
@@ -880,7 +893,7 @@ class Reefine {
 
 		// for each dividers/parameter pair make a regex that will parse the url
 		foreach ($tags as $tag) {
-			$rx .= '(' . preg_quote($tag[1],'/') . '(.*?))?';
+			$rx .= '(' . preg_quote($tag[1],'/') . '(.+?))?';
 		}
 		// add on last divider
 		if (preg_match('/\}([^\}]+)$/', $url_template,$last_bit)) {
@@ -1144,24 +1157,27 @@ class Reefine {
 		// EE has bugs when a tag pair is used more than once so make a copy for the breadcrumb
 		if ($this->tagdataHasTag('filter_groups')) {
 			foreach ($this->filter_groups as $group_name => &$group) {
-				$tag['filter_groups'][] = $group->get_filters_for_output(false,false);
+				if (!$group->show_separate_only)
+					$tag['filter_groups'][] = $group->get_filters_for_output(false);
 			}
 		}
 
 		foreach ($this->filter_groups as $group_name => &$group) {
 			// go through each filter group to see if a seperate filter is specified			
 			if ($this->tagdataHasTag($group_name)) 
-				$tag[$group_name] = array($group->get_filters_for_output(false,true));
+				$tag[$group_name] = array($group->get_filters_for_output(false));
 			// make the type group tag tag if it is specified (eg number_range_groups)
-			$type_group_name = $group->type . '_groups';
 			
-			if ($this->tagdataHasTag($type_group_name)) {
-				$tag[$type_group_name][] = $group->get_filters_for_output(false,false);
+			
+			// add to group type tags, eg list_groups
+			$type_group_name = $group->type . '_groups';
+			if ($this->tagdataHasTag($type_group_name) && !$group->show_separate_only) {
+				$tag[$type_group_name][] = $group->get_filters_for_output(false);
 			}
 			
 			// make the {active_filters} tag
-			if ($this->tagdataHasTag('active_groups') && count($group->values)>0) {
-				$tag['active_groups'][] = $group->get_filters_for_output(true,false);
+			if ($this->tagdataHasTag('active_groups') && count($group->values)>0 && !$group->show_separate_only) {
+				$tag['active_groups'][] = $group->get_filters_for_output(true);
 			}
 		}
 		//die(json_encode($tag));
@@ -2218,6 +2234,11 @@ class Reefine_group {
 	 */
 	public $show_empty_filters = false;
 	/**
+	 * only show these filters when specified directly
+	 * @var unknown
+	 */
+	public $show_separate_only = false;
+	/**
 	 * database prefix
 	 * @var string
 	 */
@@ -2233,6 +2254,11 @@ class Reefine_group {
 	 */
 	public $fields = array();
 	
+	/**
+	 * Default filter values
+	 * @var unknown
+	 */
+	public $default = '';
 	/**
 	 * 
 	 * @var Reefine
@@ -2290,7 +2316,8 @@ class Reefine_group {
 		$this->reefine->add_filter_group_setting($this, 'show_empty_filters', false, 'bool');
 		$this->reefine->add_filter_group_setting($this, 'custom_values', false, 'array');
 		$this->reefine->add_filter_group_setting($this, 'custom_titles', false, 'array');
-		$this->reefine->add_filter_group_setting($this, 'default_visible', true, 'bool');
+		$this->reefine->add_filter_group_setting($this, 'show_separate_only', false, 'bool');
+		$this->reefine->add_filter_group_setting($this, 'default', array(), 'array');
 			
 		//if (count($this->category_group)>0) {
 			//$this->cat_group_in_list = $this->reefine->array_to_in_list($this->category_group);
@@ -2672,12 +2699,8 @@ class Reefine_group {
 	 * @param bool $is_separate_filter If the filter group is called using the filter group's name eg {colour} as opposed to {list_groups}
 	 * @return array
 	 */
-	function get_filters_for_output($only_show_active, $is_separate_filter) {
+	function get_filters_for_output($only_show_active) {
 		$group = array();
-		// if it's not a seperate filter and the default is not visible then we want to hide this filter group. This is useful for groups used for sorting and paging that we want to appear elsewhere.		
-		if (!$is_separate_filter && !$this->default_visible) {
-			return array(); 
-		}	
 		// get attributes of group
 		foreach (get_object_vars($this) as $key => $val) {
 			if (is_string($val)) {
@@ -3447,9 +3470,9 @@ class Reefine_group_tree extends Reefine_group_list {
 	 * @param string $only_show_active If true only returns active filters
 	 * @return array
 	 */
-	function get_filters_for_output($only_show_active,$is_separate_filter) {
+	function get_filters_for_output($only_show_active) {
 		if ($only_show_active) {
-			return parent::get_filters_for_output(true,false);
+			return parent::get_filters_for_output(true);
 		} else {
 
 			$group = array();
