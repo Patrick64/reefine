@@ -1101,12 +1101,14 @@ class Reefine {
 	 * @throws Exception
 	 */
 	private function add_filter_values($filter_values) {
-		$this->active_filter_count = count($filter_values);
+		$this->active_filter_count = 0;
 		foreach ($filter_values as $group_name => $values) {
 			if (isset($this->filter_groups[$group_name])) {
 				$group = &$this->filter_groups[$group_name];
 				$group->add_filter_values($values);
-
+				// add to active filters count unless it's something  like paging or orderby fields which have show_separate_only = yes
+				if (!$group->show_separate_only)
+					$this->active_filter_count += count($values);
 			} else {
 				throw new Exception('filter not found');
 			}
