@@ -1882,24 +1882,44 @@ class Reefine_field_relationship extends Reefine_field {
 	 * @return string
 	 */
 	function get_where_clause($filter_group,$in_list=false,$value=false) {
-		if ($filter_group->join=='or' || $filter_group->join=='none') {
-			return parent::get_where_clause($filter_group,$in_list=false,$value=false);
-		} else { // AND
+		
+		if ($filter_group->join=='or' || $filter_group->join=='none') { // join="or" join="none" work like normal
+			return parent::get_where_clause($filter_group,$in_list,$value);
+		} else { // join="and" 
 			
+			// if there is a delimiter involved (eg selects)
+			if (isset($filter_group->delimiter) && $filter_group->delimiter!='') {
+				$delimiter = $filter_group->db->escape($filter_group->delimiter);
+			} else {
+				$delimiter=false;
+			}
+
+			// if we want a custom field
 			if ($this->child_field_name!='' && $this->child_field_name!='title') {
+				// create the where clause part for the value itself.
+				if ($delimiter===false)
+					$where_value = "{$filter_group->get_field_value_column($this,'d')} = {$value}";
+				else // there's a delimiter so we need to search a delimited list, notice we're passing in the table alias ('d') 
+					$where_value = "instr(concat({$delimiter},{$filter_group->get_field_value_column($this,'d')},{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
+				
 				// uses channel_data
 				return "{$this->channel_data_alias}.entry_id IN ( " .
 				"SELECT r.parent_id AS entry_id FROM {$this->reefine->dbprefix}relationships r " .
 				"INNER JOIN {$this->reefine->dbprefix}channel_titles t ON t.entry_id=r.child_id  " .
 				"INNER JOIN {$this->reefine->dbprefix}channel_data d ON d.entry_id=t.entry_id  " .
-				"WHERE {$filter_group->get_field_value_column($this,'d')} = {$value} " .
+				"WHERE $where_value " .
 				"AND " . $this->reefine->get_status_where_clause($this->reefine->status,"t.status") . ")";
-			} else {
+				
+			} else { // we want just the title of the related field
+				if ($delimiter===false)
+					$where_value = "t.url_title = {$value}";
+				else // I dont know why the title would be a delimited list but nevermind
+					$where_value = " instr(concat({$delimiter},t.url_title,{$delimiter}),concat({$delimiter},{$value},{$delimiter}))";
 				// uses just titles
 				return "{$this->channel_data_alias}.entry_id IN ( " .
 				"SELECT r.parent_id AS entry_id FROM {$this->reefine->dbprefix}relationships r " .
 				"INNER JOIN {$this->reefine->dbprefix}channel_titles t ON t.entry_id=r.child_id  " .
-				"WHERE t.url_title = {$value} AND {$this->reefine->get_status_where_clause($this->reefine->status,"t.status")} )";
+				"WHERE $where_value  AND {$this->reefine->get_status_where_clause($this->reefine->status,"t.status")} )";
 			}
 		}
 	}
