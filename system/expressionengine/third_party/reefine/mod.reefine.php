@@ -1492,8 +1492,10 @@ class Reefine_field {
 		return $this->get_value_column();
 	}
 	
-	function get_value_column() {
-		if ($this->get_field_by_key($this->field_name,'is_title_field'))
+	function get_value_column($table='') {
+		if ($table!='') // a table name/alias is specified so use that instead
+			return $table  . '.' . $this->get_field_by_key($this->field_name,'field_column');
+		else if ($this->get_field_by_key($this->field_name,'is_title_field'))
 			return $this->channel_titles_alias  . '.' . $this->get_field_by_key($this->field_name,'field_column');
 		else
 			return $this->channel_data_alias . '.' . $this->get_field_by_key($this->field_name,'field_column');
@@ -1572,7 +1574,7 @@ class Reefine_field {
 			if ($filter_group->join=='or' || $filter_group->join=='none') {
 				return " {$filter_group->get_field_value_column($this)} IN (" . implode(',',$in_list) . ")";
 			} else {
-				return " {$this->column_name} = {$value}";
+				return " {$filter_group->get_field_value_column($this)} = {$value}";
 			}
 		}
 		
@@ -1827,8 +1829,10 @@ class Reefine_field_relationship extends Reefine_field {
 	
 	}
 	
-	function get_value_column() {
-		if ($this->child_field_name=='')
+	function get_value_column($table='') {
+		if ($table!='')
+			return "{$table}. " . $this->get_field_by_key($this->child_field_name,'field_column');
+		else if ($this->child_field_name=='')
 			// Return url_title so we get a nice url for list filters
 			return "{$this->table_alias_titles}.url_title";
 		else if ($this->get_field_by_key($this->child_field_name,'is_title_field'))
@@ -1869,6 +1873,37 @@ class Reefine_field_relationship extends Reefine_field {
 		
 		
 	}
+	
+	/**
+	 * Get where clause to be used
+	 * @param unknown $filter_group
+	 * @param unknown $in_list
+	 * @param string $value
+	 * @return string
+	 */
+	function get_where_clause($filter_group,$in_list=false,$value=false) {
+		if ($filter_group->join=='or' || $filter_group->join=='none') {
+			return parent::get_where_clause($filter_group,$in_list=false,$value=false);
+		} else { // AND
+			
+			if ($this->child_field_name!='' && $this->child_field_name!='title') {
+				// uses channel_data
+				return "{$this->channel_data_alias}.entry_id IN ( " .
+				"SELECT r.parent_id AS entry_id FROM {$this->reefine->dbprefix}relationships r " .
+				"INNER JOIN {$this->reefine->dbprefix}channel_titles t ON t.entry_id=r.child_id  " .
+				"INNER JOIN {$this->reefine->dbprefix}channel_data d ON d.entry_id=t.entry_id  " .
+				"WHERE {$filter_group->get_field_value_column($this,'d')} = {$value} " .
+				"AND " . $this->reefine->get_status_where_clause($this->reefine->status,"t.status") . ")";
+			} else {
+				// uses just titles
+				return "{$this->channel_data_alias}.entry_id IN ( " .
+				"SELECT r.parent_id AS entry_id FROM {$this->reefine->dbprefix}relationships r " .
+				"INNER JOIN {$this->reefine->dbprefix}channel_titles t ON t.entry_id=r.child_id  " .
+				"WHERE t.url_title = {$value} AND {$this->reefine->get_status_where_clause($this->reefine->status,"t.status")} )";
+			}
+		}
+	}
+	
 }
 
 class Reefine_field_playa extends Reefine_field {
@@ -2335,8 +2370,8 @@ class Reefine_group {
 	 * Usally just get the value column for the field 
 	 * @param Reefine_field $field
 	 */
-	public function get_field_value_column($field) {
-		return $field->get_value_column();
+	public function get_field_value_column($field,$table='') {
+		return $field->get_value_column($table);
 	}
 	
 	/**
@@ -3744,8 +3779,8 @@ class Reefine_group_month_list extends Reefine_group_list {
 	 * (non-PHPdoc)
 	 * @see Reefine_group::get_field_value_column()
 	 */
-	public function get_field_value_column($field) {
-		return "DATE_ADD(LAST_DAY(DATE_SUB(from_unixtime({$field->get_value_column()}), interval 30 day)), interval 1 day)";
+	public function get_field_value_column($field,$table='') {
+		return "DATE_ADD(LAST_DAY(DATE_SUB(from_unixtime({$field->get_value_column($table)}), interval 30 day)), interval 1 day)";
 	}
 
 }
