@@ -2774,7 +2774,7 @@ class Reefine_group_list extends Reefine_group {
 				foreach ($in_list as $value) {
 					$value_list = array();
 					foreach ($this->fields as $field) {
-						$value_list[] = " {$field->column_name} = {$value}";
+						$value_list[] = " {$this->get_field_value_column($field)} = {$value}";
 					}
 					if (count($this->category_group)>0)
 						$value_list[] = "{$this->dbprefix}channel_data.entry_id IN (SELECT exp_category_posts.entry_id " .
