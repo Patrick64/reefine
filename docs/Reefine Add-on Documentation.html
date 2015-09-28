@@ -235,8 +235,9 @@ filter:month:where_after=&quot;{current_time}&quot;<br />
 <h3>filter:<em>filter group</em>:show_empty_filters</h3>
 <p>Whether to output filters that have no matches in the current search. Value can be yes or no, default is &quot;no&quot;.</p>
 <p><code>filter:colour:show_empty_filters=&quot;yes&quot;</code></p>
-<h3>filter:<em>filter group</em>:custom_titles / filter:<em>filter group</em>:custom_values</h3>
-<p>For making a filter group with fixed values or adding some hard coded values to a filter group. This is usful for creating ways for the user to change orderby or number of pages. You can then use {active_filter_values} to access the selected value. </p>
+<h3>filter:<em>filter group</em>:custom_titles</h3>
+<h3>filter:<em>filter group</em>:custom_values</h3>
+<p>For making a filter group with fixed values or adding some hard coded values to a filter group. This is usful for creating ways for the user to change orderby or number of pages. You can then use {active_filter_values} to access the selected value. Text is pipe separated and each item in custom_values has the repsective title in custom_titles, i.e. the first item in custom_values (eg title) has the title of the first item in custom_titles (eg Product Name) and so on.</p>
 <p><code>  filter:orderby:custom_titles=&quot;Product Name|The Price&quot;<br />
   filter:orderby:custom_values=&quot;title|price&quot;<br />
   filter:orderby:default=&quot;price&quot;<br />
@@ -408,15 +409,20 @@ filter:month:where_after=&quot;{current_time}&quot;<br />
 <p><script src="https://gist.github.com/Patrick64/5ed867fdd7c6b4399565.js"></script></p>
 <p>&nbsp;</p>
 <h3>{tree_groups} &raquo; {filters}</h3>
-<p>This represents a main category and has all the same variables as <a href="#-list_groups-filters-Variable-Pair">{list_groups} &gt; {filters}</a>.</p>
+<p>This represents a main category and has all the same variables as <a href="#-list_groups-filters-Variable-Pair">{list_groups} &gt; {filters}</a></p>
+<h3>{tree_groups} &raquo; {filters} &raquo; {has_active_subfilters}</h3>
+<p>This is true if this current filter has at least one subfilter selected. </p>
+<p><code>{if has_active_subfilters}...{/if}</code></p>
+<h3>{tree_groups} &raquo; {filters} &raquo; {has_active_subfilters_class}</h3>
+<p>The same as {tree_groups} » {filters} » {has_active_subfilters} but it outputs &quot;has-active-subfilters&quot; if true, and &quot;no-active-subfilters&quot; is false. This can be used for styling, for example if you want to hide subfilters until the user has selected the parent filter.</p>
+<p><code>&lt;li class=&quot;{filter_active_class}  {has_active_subfilters_class}&quot;&gt;<br />
+</code></p>
 <h3>{tree_groups} &raquo; {filters} &raquo; {subfilters_1}</h3>
-<p>This represents a subcategory. It has all the same variables as <a href="#-list_groups-filters-Variable-Pair">{list_groups} &gt; {filters}</a>.</p>
-<p></p>
+<p>This represents a sub-category. It has all the same variables as {tree_groups} » {filters} BUT each variable is appended with the subfilter number. So {url} is {url_1}, {filter_title} is {filter_title_1} and so on.</p><p></p>
 <h3>{tree_groups} &raquo; {filters} &raquo; {subfilters_1}  &raquo; {subfilters_2} </h3>
-<p>This represents a subsubcategory. It has all the same variables as <a href="#-list_groups-filters-Variable-Pair">{list_groups} &gt; {filters}</a>.</p>
-<p></p>
-<h3>{tree_groups} &raquo; {filters} &raquo; {subfilters_1}  &raquo; {subfilters_2}   &raquo; {subfilters_3} (...and so on)</h3>
-<p>This represents a subsubsubcategory. It has all the same variables as <a href="#-list_groups-filters-Variable-Pair">{list_groups} &gt; {filters}</a>.</p>
+<p>This represents a sub-sub-category. It has all the same variables as {tree_groups} » {filters} but each variable is appended with _2.</p>
+<h3>{tree_groups} &raquo; {filters} &raquo; {subfilters_1}  &raquo; {subfilters_2}   &raquo; {subfilters_3} ...</h3>
+<p>This represents a sub-sub-sub-category. It has all the same variables as {tree_groups} » {filters} but each variable is appended with _3 and so on, you get the idea :)</p>
 <h2>{number_range_groups} Variable Pair</h2>
 <p>This variable pair will contain all filter groups of the  type &quot;list&quot;. The {number_range_groups} variable pair contains all the same variables as the {list_groups} pair. It contains only one filter which has the minimum and maximum values the user has specified and the minimum and maximum values of the filter for the current search. Here is an example from the &quot;shop&quot; theme:</p>
 <code> {number_range_groups}<br />
