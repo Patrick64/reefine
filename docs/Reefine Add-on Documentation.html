@@ -51,7 +51,7 @@
 <div id="content">
 
 
-<h1>Reefine v1.5</h1>
+<h1>Reefine v1.6</h1>
 
 <p>Reefine is an ExpressionEngine 2 add-on that allows the user to search, filter and refine channel entries (eg products) on your site. It is aimed at ecommerce sites but can be used for sorting any kind of data stored in channel entries.</p>
 <ul>
@@ -90,7 +90,7 @@
   <li>Paste following code into template (<a href="https://gist.github.com/Patrick64/7892949#file-reefine-hello-world-html">Github Gist</a>). Then go to your template and see the results.</li>
 </ol>
 <p>
-  <script src="js/example-hello-world.js"></script>
+  <script src="https://gist.github.com/Patrick64/7892949.js"></script>
 </p>
 <h2>Parameters</h2>
 <h3>parse</h3>
@@ -147,6 +147,10 @@ url=&quot;/products/{product_type}/{size}/{colour}/{price}/{title}&quot;}<br />
 <br />
 &lt;article&gt;{exp:channel:entries channel=&quot;clothes&quot;} &lt;h1&gt;{title}&lt;/h1&gt; &lt;p&gt;{content}&lt;/p&gt;
 {/exp:channel:entries}&lt;/article&gt;</code></p>
+<h3>fix_pagination</h3>
+<p>Default: no</p>
+<p>If you're using Structure and/or freebie you may find the pagination doesn't work correctly. Set this to yes to try and fix this.</p>
+<p><code>fix_pagination=&quot;yes&quot;</code></p>
 <h3>site</h3>
 <p>Specify the site ID if using Multi site manager. </p>
 <p><code>site=&quot;1&quot;</code></p>
@@ -154,9 +158,12 @@ url=&quot;/products/{product_type}/{size}/{colour}/{price}/{title}&quot;}<br />
 <p>You can search by a particular field value or the title. This works in the same way as the channel:entries tag. Please refer to the documentation on <a href="http://expressionengine.com/user_guide/modules/channel/channel_entries.html#search-field-name">search:field_name for channel entries </a>in the ExpressionEngine documentation. Additionally you can use this to search the title with search:title=&quot;abc&quot;.</p>
 <p><code>search:colour=&quot;red&quot;</code></p>
 <h3>category<em></em></h3>
-<p>This parameter will limit all your entries to a particular category by it's category ID. You can include multiple categories seperated by pipe &quot;|&quot;.</p>
+<p>This parameter will limit all your entries to a particular category by it's category ID. You can include multiple categories seperated by pipe &quot;|&quot;. </p>
 <p><code>category=&quot;2|3&quot;</code></p>
+<p>You can also exclude categories using not:</p>
+<p><code>category=&quot;not 2|3&quot;</code></p>
 <h3></h3>
+<p></p>
 <h3>category<em></em>_url</h3>
 <p>This parameter will limit all your entries to a particular category. This uses the category url title. </p>
 <p><code>category_url=&quot;{segment_2}&quot;</code></p>
@@ -228,6 +235,17 @@ filter:month:where_after=&quot;{current_time}&quot;<br />
 <h3>filter:<em>filter group</em>:show_empty_filters</h3>
 <p>Whether to output filters that have no matches in the current search. Value can be yes or no, default is &quot;no&quot;.</p>
 <p><code>filter:colour:show_empty_filters=&quot;yes&quot;</code></p>
+<h3>filter:<em>filter group</em>:custom_titles / filter:<em>filter group</em>:custom_values</h3>
+<p>For making a filter group with fixed values or adding some hard coded values to a filter group. This is usful for creating ways for the user to change orderby or number of pages. You can then use {active_filter_values} to access the selected value. </p>
+<p><code>  filter:orderby:custom_titles=&quot;Product Name|The Price&quot;<br />
+  filter:orderby:custom_values=&quot;title|price&quot;<br />
+  filter:orderby:default=&quot;price&quot;<br />
+  filter:orderby:show_separate_only=&quot;yes&quot;<br />
+  filter:orderby:join=&quot;none&quot;</code></p>
+<h3>filter:<em>filter group</em>:default</h3>
+<p>Default selected value for this filter group. If using categories this would be the category short name.</p>
+<p><code>filter:postage:default=&quot;first_class&quot;</code></p>
+<p></p>
 <h3>filter:<em>filter group</em>:delimiter</h3>
 <p>This is the delimiter to use for fields that contain more than one value. By default ExpressionEngine uses the pipe character |. You should specify<strong> filter:<em>filter group</em>:delimiter=&quot;|&quot; </strong>when the filter group contains a field that is a checkboxes or multiselect.</p>
 <p><code>filter:store:delimiter=&quot;|&quot;</code></p>
@@ -265,6 +283,11 @@ filter:month:where_after=&quot;{current_time}&quot;<br />
 <h3>filter:<em>filter group</em>:category_group</h3>
 <p>Filter by categories by specifying a category group. This is a pipe | seperated list of category IDs. In the same way the fields parameters works you can specify a list of categories. For example if I have a category group for departments with the ID 2 I can filter by the departments.</p>
 <p><code>filter:department:category_group=&quot;2&quot;</code></p>
+<p></p>
+<h3>filter:<em>filter group</em>:show_separate_only</h3>
+<p>Default: no</p>
+<p>Exclude this filter from the showing up in the tags for flexible filter groups, that combine filter groups (i.e. {list_groups}, {number_range_groups}, {search_groups}, {active_groups} and {filter_groups}). To show this filter you would need to specify it specifically, see <a href="#Complete-example-using-separate-filters">Complete example using separate filters</a>.</p>
+<p><code>filter:department:show_separate_only=&quot;yes&quot;</code></p>
 <p></p>
 <p></p>
 <p></p>
@@ -380,6 +403,20 @@ filter:month:where_after=&quot;{current_time}&quot;<br />
 <h3>{list_groups} &raquo; {filters} &raquo; {filter_active_boolean}</h3>
 <p>If the filter is active this returns &quot;true&quot;, if not &quot;false&quot;. Useful for specifying aria-selected for screen reader users.</p>
 <p><code>{list_groups}&lt;ul&gt;{filters}&lt;li aria-selected=&quot;{filter_active_boolean}&quot;&gt;...&lt;/li&gt;{/filters}&lt;/ul&gt;{/list_groups}</code></p>
+<h2>{tree_groups} Variable Pair</h2>
+<p>This variable pair will contain all filter groups of the type &quot;tree&quot;. It is used for showing categories with subcategories much like how ExpressionEngine shows them in the control panel.  It contains all the same variables as the {list_groups} pair Each item in the {filters}...{/filters} pair represents a top most category. Additionally the {filters}...{/filters} variable pair also contains the variable pair {subfilters_1}...{/subfilters_1} which represents a subcategory which in turn has the variable pair {subfilters_2}...{/subfilters_2} which represents a sub-sub-category and so on. If you are using the shop theme then this will be taken care of for you. Here is an example taken from the &quot;shop&quot; theme:</p>
+<p><script src="https://gist.github.com/Patrick64/5ed867fdd7c6b4399565.js"></script></p>
+<p>&nbsp;</p>
+<h3>{tree_groups} &raquo; {filters}</h3>
+<p>This represents a main category and has all the same variables as <a href="#-list_groups-filters-Variable-Pair">{list_groups} &gt; {filters}</a>.</p>
+<h3>{tree_groups} &raquo; {filters} &raquo; {subfilters_1}</h3>
+<p>This represents a subcategory. It has all the same variables as <a href="#-list_groups-filters-Variable-Pair">{list_groups} &gt; {filters}</a>.</p>
+<p></p>
+<h3>{tree_groups} &raquo; {filters} &raquo; {subfilters_1}  &raquo; {subfilters_2} </h3>
+<p>This represents a subsubcategory. It has all the same variables as <a href="#-list_groups-filters-Variable-Pair">{list_groups} &gt; {filters}</a>.</p>
+<p></p>
+<h3>{tree_groups} &raquo; {filters} &raquo; {subfilters_1}  &raquo; {subfilters_2}   &raquo; {subfilters_3} (...and so on)</h3>
+<p>This represents a subsubsubcategory. It has all the same variables as <a href="#-list_groups-filters-Variable-Pair">{list_groups} &gt; {filters}</a>.</p>
 <h2>{number_range_groups} Variable Pair</h2>
 <p>This variable pair will contain all filter groups of the  type &quot;list&quot;. The {number_range_groups} variable pair contains all the same variables as the {list_groups} pair. It contains only one filter which has the minimum and maximum values the user has specified and the minimum and maximum values of the filter for the current search. Here is an example from the &quot;shop&quot; theme:</p>
 <code> {number_range_groups}<br />
@@ -446,8 +483,15 @@ value=&quot;{filter_title}&quot; title=&quot;Search ({filter_quantity})&quot; /&
 <h2>{filter_groups} Variable Pair</h2>
 <p>This variable pair will output all filters regardless of type. The variables available depend on what type the group is.</p>
 <h2>Change Log</h2>
+<h3>Version 1.6</h3>
+<p>Release 2015-09-28</p>
+<ul>
+  <li>Added new filter group type &quot;tree&quot; for showing categories and subcategories in a tree format.</li>
+  <li>Added fix_pagination to {exp:reefine}</li>
+  <li>Added show_separate_only, default, custom_values and custom_titles parameters to filter groups.</li>
+</ul>
 <h3>Version 1.5</h3>
-<p>Release 05/01/2015</p>
+<p>Release 2015-01-05</p>
 <ul>
   <li>Added url_output, category, filter:filter_group:sort, show_future_entries and show_expired parameters.</li>
   <li>status parameter can now be pipe seperated</li>
@@ -458,7 +502,7 @@ value=&quot;{filter_title}&quot; title=&quot;Search ({filter_quantity})&quot; /&
   <li>Added custom ordering for filter:filter_group:orderby parameter.</li>
 </ul>
 <h3>Version 1.4</h3>
-<p>Release 11/12/2013</p>
+<p>Release 2013-12-11</p>
 <ul>
   <li>Added Grid, Matrix, Relationship &amp; Playa compatibility</li>
   <li>Added methods &quot;get&quot;, &quot;post&quot;, and &quot;ajax&quot;</li>
@@ -467,7 +511,7 @@ value=&quot;{filter_title}&quot; title=&quot;Search ({filter_quantity})&quot; /&
   <li>Added month_list filter group type.</li>
 </ul>
 <h3>Version 1.3</h3>
-<p>Released 25/09/2013</p>
+<p>Released 2013-09-25</p>
 <ul>
   <li>Added Store fieldtype compatibility</li>
   <li>Made seperate tags for each filter type and an active_groups tag</li>
@@ -480,10 +524,10 @@ value=&quot;{filter_title}&quot; title=&quot;Search ({filter_quantity})&quot; /&
   <li>Improved accessability of default theme for screen readers.</li>
 </ul>
 <h3>Version 1.2</h3>
-<p>Release 05/09/2013</p>
+<p>Release 2013-09-05</p>
 <p>Bug Fixes</p>
 <h3>Version 1.1</h3>
-<p>Released 09/08/2013</p>
+<p>Released 2013-08-09</p>
 <p>Breaking Changes</p>
 <ul>
   <li>The {filter_value} parameter is now used as the value for url title for categories. Please change {filter_value} to {filter_title} in your code.</li>
@@ -563,8 +607,12 @@ while(x=eval(x));
 </ul>
 <h2>Tips and Tricks</h2>
 <h3>SEO</h3>
-<p>Reefine allows you to make super SEO and user friendly URLs. However, you may want to limit the number of pages search engines index as you can be penalised for duplicate content. One way to do this is to use a canonical tag in the &lt;head&gt; section. For example if your URL structure is <strong>/shop/search/{product}/{colour}/{price}</strong> (eg /shop/search/coats/red/at-most-100) you can limit the search engine to indexing just <strong>/shop/search/{product}</strong> (eg /shop/search/coats) with the following tag:</p>
-<p><code> &lt;link rel='canonical' href='{site_url}/{segment_1}/{segment_2}/{segment_3}' /&gt;</code></p>
+<p>Reefine allows you to make super SEO and user friendly URLs. However, you may want to limit the number of pages search engines index as you can be penalised for duplicate content. To do this you can add the  rel=&quot;nofollow&quot; parameter to all &lt;a&gt; tags. If you're using a theme the nofollow tag is already there. </p>
+<p><code> &lt;a href=&quot;{url}&quot; aria-selected=&quot;{filter_active_boolean}&quot; rel=&quot;nofollow&quot;&gt;{filter_title}&lt;/a&gt;</code></p>
+<p>This will prevent search engines from following the filter links, however the search pages may still be indexed if there are direct links going there. You may wish to use a canonical link in this case so hopefully the search engine will attribute the page rank to your main search page rather than spread out over different filters. You can do this by putting in a conditional in your head tag to make your search page the canonical link, for example:</p>
+<p><code> {if segment_1==&quot;my_search_page&quot; &amp;&amp; segment_2!=&quot;&quot;}&lt;link rel=&quot;canonical&quot; href=&quot;{site_url}/my_search_page&quot; /&gt;{/if}</code></p>
+<p></p>
+<p class="important"><strong>Warning:</strong>&nbsp;I'm not an SEO expert so take care when using these.</p>
 <h3>Performance</h3>
 <p>Reefine can be resources heavy if searching large amounts of filters. Try to avoid using categories and any fields with multiple values (checkboxes, multiselects) to speed up search times. Ensure you're using a decent host. Try to keep the number of conditionals (especially advanced conditionals) in the filter tags to a minimum. You should also consider using a cacheing addon such as <a href="http://devot-ee.com/add-ons/ce-cache" target="_blank">CE Cache </a>or you can use ExpressionEngine's native cacheing as follows:</p>
 <p><code> <strong>Add this to the {exp:reefine} tag:</strong><br />
@@ -588,18 +636,23 @@ while(x=eval(x));
 &lt;/ul&gt;<br />
 {/colour}</code></p>
 <h3>Sorting entries</h3>
-<p>Sorting        can be done using the exp:channel:entries sort parameter. Here is        an example with the relevant parts in bold. You can also use the        same principle if you want to choose which field to order with by        using the orderby parameter.<br />
+<p>Sorting        can be done using a filter group with hardcoded titles and values and then plugging the selected value into the exp:channel:entries orderby parameter. Here is        an example with the relevant parts in bold. You can also use the        same principle for other parameter in channel:entries such as limit and sort.<br />
   <br />
   </p>
   <code>
-  {exp:reefine channel=&quot;clothes&quot; parse=&quot;inward&quot; theme=&quot;shop&quot;        filter:fields=&quot;price|colour&quot;<br />
-  url=&quot;/{segment_1}/{segment_2}/{price}/{colour}/{segment_5}&quot;} <br />
+  {exp:reefine channel=&quot;clothes&quot; parse=&quot;inward&quot; theme=&quot;shop&quot;        <br />
+  filter:fields=&quot;price|colour&quot;<br />
+  <strong>filter:orderby:custom_titles=&quot;Product name|Price&quot; <br />
+  filter:orderby:custom_values=&quot;title|price&quot; <br />
+  filter:orderby:default=&quot;price&quot;<br />
+  filter:orderby:join=&quot;none&quot; <br />
+  </strong>url=&quot;/{segment_1}/{segment_2}/{price}/{colour}/<strong>{orderby}</strong>&quot;} <br />
   {entries} <br />
-  <strong>&lt;a href=&quot;/{segment_1}/{segment_2}/{segment_3}{if          segment_3==&quot;&quot;}all{/if}/{segment_4}{if segment_4==&quot;&quot;}all{/if}/desc&quot;&gt;Highest          price first&lt;/a&gt; |<br />
-  &lt;a href=&quot;/{segment_1}/{segment_2}/{segment_3}{if          segment_3==&quot;&quot;}all{/if}/{segment_4}{if segment_4==&quot;&quot;}all{/if}/asc&quot;&gt;Lowest          price first&lt;/a&gt;</strong><br />
+  <br />
   {exp:channel:entries entry_id=&quot;{entry_ids}&quot; <br />
-  disable=&quot;categories|category_fields|member_data&quot; <br />
-  dynamic=&quot;no&quot; orderby=&quot;price&quot; <strong>{if segment_5=='asc'}sort=&quot;asc&quot;{/if}</strong> status=&quot;not closed&quot; limit=&quot;8&quot; paginate=&quot;yes&quot;}<br />
+  disable=&quot;categories|category_fields|member_data&quot; dynamic=&quot;no&quot;<br /> 
+  <strong>orderby=&quot;{orderby}{active_filter_values}{value}{/active_filter_values}{/orderby}&quot;</strong> <br />
+  sort=&quot;asc&quot; status=&quot;not closed&quot; limit=&quot;8&quot; paginate=&quot;yes&quot;}<br />
   ....<br />
   {/exp:channel:entries}<br />
   {/entries}<br />
@@ -618,17 +671,16 @@ while(x=eval(x));
 <p>&nbsp;</p>
 <h3>Complete example using separate filters</h3>
 <p>This example outputs each filter group in a seperate tag pair rather than using the {list_groups}, {number_groups} etc. This is useful for customising the order, position and formatting of different filters. <a href="https://gist.github.com/Patrick64/7907449#file-reefine-seperate-filters-example-html">Github Gist</a></p>
-<script src="js/example-separate-filter-groups.js"></script>
+<script src="https://gist.github.com/Patrick64/7907449.js"></script>
 <h3>Complete example using flexible filter groups</h3>
 <p>This example uses the {number_range_groups} {list_groups} {search_groups} variable pairs and selects the correct html based on the group type. You can add extra fields to this example and they should show up automatically. <a href="https://gist.github.com/Patrick64/7907364">Github Gist</a></p>
 <p>
-  <script src="js/example-flexible-filter-groups.js"></script>
-</p>
+  <script src="https://gist.github.com/Patrick64/7907364.js"></script></p>
 <p></p>
 <h3>Example with form and month_list</h3>
 <p>This example uses a form to submit two dropdowns which can filter a list of events. When the user click the submit button it will redirect the url to include the filter parameters. Also notice it uses the month_list group type. <a href="https://gist.github.com/Patrick64/7892361#file-reefine-filter-events-by-month-html">Github Gist</a></p>
 <p></p>
-<script src="js/example-events.js"></script>
+<script src="https://gist.github.com/Patrick64/7892361.js"></script>
 <p></p>
 </div>
 <!-- END CONTENT -->

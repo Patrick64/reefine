@@ -413,3 +413,8 @@ form {
 	overflow: auto;
 	height: 300px;
 }
+
+.gist .gist-data {
+	max-height: 200px;
+	tab-size: 4;
+	}
