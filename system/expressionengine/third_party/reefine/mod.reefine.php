@@ -478,18 +478,18 @@ class Reefine {
 			$categories = $matches[0];
 			$this->category = $category;
 			// include categories in select using a global category table that is left joined
-			$this->include_categories=true; // yes to joining a global category table
+//			$this->include_categories=true; // yes to joining a global category table
 			$this->search_field_where_clause .= $this->search_field_where_clause=='' ? '' : ' AND ';
 			$logic_not = (strpos($category, 'not')!==false);
 			$logic_and = (strpos($category, '&')!==false);
 			$logic_or = (strpos($category, '|')!==false);
 			
-			if ($logic_or) {
-				$sql = 'global_cat.cat_id ' . ($logic_not ? 'NOT IN' : 'IN') .
-				 ' (' . implode(',',$categories) . ')';
-			} else {
-				$sql = ($logic_not ? ' NOT' : '') . 
-				' (global_cat.cat_id = ' . implode(' AND global_cat.cat_id = ',$categories) . ')'; 
+			if ($logic_not) {
+				$sql = ' (exp_channel_data.entry_id NOT IN (SELECT entry_id FROM exp_category_posts WHERE cat_id IN (' . implode(', ',$categories) . '))) ';
+			} elseif ($logic_or) {
+				$sql = ' (exp_channel_data.entry_id IN (SELECT entry_id FROM exp_category_posts WHERE cat_id IN (' . implode(', ',$categories) . '))) ';
+			} elseif ($logic_and) {
+				// @todo
 			}
 			$this->search_field_where_clause .= $sql;
 		}
