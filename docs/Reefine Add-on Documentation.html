@@ -222,7 +222,11 @@ filter:search:type=&quot;search&quot;</code></p>
 filter:month:fields=&quot;event_from|event_to&quot;<br />
 filter:month:where_after=&quot;{current_time}&quot;<br />
 </code>
-<p>&nbsp;</p>
+<h4>filter:<em>filter group</em>:type=&quot;tree&quot;</h4>
+<p> This type will show categories with subcategories in a tree format, much like how ExpressionEngine shows them in the control panel. Also see <a href="#-tree_groups-Variable-Pair">{tree_groups}</a></p>
+<p><code>filter:genre:category_group=&quot;2&quot;<br />
+  filter:genre:type=&quot;tree&quot;<br />
+</code></p>
 <h3>filter:<em>filter group</em>:fields</h3>
 <p>Pipe | seperated list of fields to filter by.</p>
 <p><code>filter:search:fields=&quot;title|product_type|colour&quot;</code></p>
@@ -414,7 +418,7 @@ filter:month:where_after=&quot;{current_time}&quot;<br />
 <p>This is true if this current filter has at least one subfilter selected. </p>
 <p><code>{if has_active_subfilters}...{/if}</code></p>
 <h3>{tree_groups} &raquo; {filters} &raquo; {has_active_subfilters_class}</h3>
-<p>The same as {tree_groups} » {filters} » {has_active_subfilters} but it outputs &quot;has-active-subfilters&quot; if true, and &quot;no-active-subfilters&quot; is false. This can be used for styling, for example if you want to hide subfilters until the user has selected the parent filter.</p>
+<p>The same as {tree_groups} » {filters} » {has_active_subfilters} but it outputs &quot;has-active-subfilters&quot; if true, and &quot;no-active-subfilters&quot; if false. This can be used for styling, for example if you want to hide subfilters until the user has selected the parent filter.</p>
 <p><code>&lt;li class=&quot;{filter_active_class}  {has_active_subfilters_class}&quot;&gt;<br />
 </code></p>
 <h3>{tree_groups} &raquo; {filters} &raquo; {subfilters_1}</h3>
