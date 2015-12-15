@@ -1978,13 +1978,17 @@ class Reefine_field_playa extends Reefine_field {
 		$joins=array("LEFT OUTER JOIN {$this->reefine->dbprefix}playa_relationships {$this->table_alias} " .
 		"ON {$this->table_alias}.parent_entry_id = {$this->channel_data_alias}.entry_id " .
 		"AND {$this->table_alias}.parent_field_id = {$this->relation_field_id} ");
-		// if we just need the titles for "relation" or "relation:title" fields
-		if ($this->child_field_name=='' || $this->child_field_name=='title')
-			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}channel_titles {$this->table_alias_titles} " .
-			"ON {$this->table_alias_titles}.entry_id = {$this->table_alias}.child_entry_id ";
-		else
+		
+		// check for entry status as well
+		$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}channel_titles {$this->table_alias_titles} " .
+		"ON {$this->table_alias_titles}.entry_id = {$this->table_alias}.child_entry_id " .
+		"AND " . $this->reefine->get_status_where_clause($this->reefine->status,"{$this->table_alias_titles}.status");
+		
+		// include channel_data only if we need fields from the related entry
+		if ($this->child_field_name!='' && $this->child_field_name!='title') {
 			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}channel_data {$this->table_alias_data} " .
-			"ON {$this->table_alias_data}.entry_id = {$this->table_alias}.child_entry_id ";
+			"ON {$this->table_alias_data}.entry_id = {$this->table_alias_titles}.entry_id ";
+		}
 		return $joins;
 	}
 	
