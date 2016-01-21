@@ -122,6 +122,13 @@ class Reefine {
 	var $category = '';
 	
 	/**
+	 * Restrict search results to entries with Start date after start_on only
+	 * @var unknown
+	 */
+	var $start_on = '';
+	
+	
+	/**
 	 * @var array default settings for group if not otherwise specified
 	 */
 	var $default_group_by_type = array(
@@ -408,6 +415,7 @@ class Reefine {
 		$this->theme_name = $this->EE->TMPL->fetch_param('theme', '');
 		$this->seperate_filters = ($this->EE->TMPL->fetch_param('seperate_filters', '') == 'yes' ? true : false);
 		$this->fix_pagination = ($this->EE->TMPL->fetch_param('fix_pagination') == 'yes' ? true : false);
+		$this->start_on = $this->EE->TMPL->fetch_param('start_on', '');
 		
 		// get list of channel ids to choose from
 		if (!empty($filter_channel)) {
@@ -679,6 +687,9 @@ class Reefine {
 		if ($this->EE->TMPL->fetch_param('show_future_entries') != 'yes')
 			$clauses[] = "{$this->dbprefix}channel_titles.entry_date < ".$this->timestamp;
 
+		if ($this->start_on != '')
+			$clauses[] = "{$this->dbprefix}channel_titles.entry_date >= " . ee()->localize->string_to_timestamp($this->start_on);
+		
 		// add search fields if neccesary
 		if ($this->search_field_where_clause != '')
 			$clauses[] = $this->search_field_where_clause;
