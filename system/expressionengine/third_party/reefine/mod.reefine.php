@@ -344,16 +344,18 @@ class Reefine {
 		// get filter values from post/get for ajax/post/get method
 		// also if using URL method then we want to set the value for redirecting
 		foreach ($this->filter_groups as $group_name => &$group) {
-			if ($group->post_contains_filter_value() || $this->is_form_post) {
+			if ($group->post_contains_filter_value() || $this->method=='post' || $this->method=='get' || $this->method=='ajax') {
+				$post_filter_values = $group->get_filter_value_from_post();
+				if (count($post_filter_values)>0) {
+					$filter_values[$group_name] = $post_filter_values;
+				} else if ($group->default && !$this->is_ajax_request && !$this->is_form_post) {
+					// first hit of this form so set defaults
+					$filter_values[$group_name] = $group->default;
+				}
 				
-				$filter_values[$group_name] = $group->get_filter_value_from_post();
 			}
 		}
-		// go through each group and call get filter values end just in case the group wants to do anything such as apply a default 
-		foreach ($this->filter_groups as $group_name => &$group) {
-			if (!isset($filter_values[$group_name]) || count($filter_values[$group_name])==0)
-				$filter_values[$group_name] = $group->default;
-		}
+	
 		return $filter_values;
 	}
 
@@ -937,6 +939,8 @@ class Reefine {
 					if (isset($filter_value)) {
 						$filter_values[$group->group_name] = $filter_value;
 					}
+				} else { // tag value doesn't contain "any"
+					$filter_values[$group->group_name] = $group->default;
 				}
 				
 			}
@@ -2483,7 +2487,7 @@ class Reefine_group {
 		$min_text = isset($parts[3]) ? $parts[3] : 'at-least-';
 		$max_text = isset($parts[4]) ? $parts[4] : 'at-most-';
 		// save url parameter tags for use when creating filter urls
-		return array(
+		$tag_array = array(
 				'tag'=>'{'.$tag_name.'}',
 				'group_name'=>$this->group_name,
 				'or_text'=>$or_text,
@@ -2491,6 +2495,7 @@ class Reefine_group {
 				'min_text'=>$min_text,
 				'max_text'=>$max_text
 		);
+		return $tag_array;
 		
 	}
 	
