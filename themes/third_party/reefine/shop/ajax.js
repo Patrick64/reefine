@@ -1,6 +1,6 @@
 (function() {
 	var container = document.getElementById('reefine');
-	var params = ''; // current search parameters
+	var params = REEFINE_DATA ? getParams(REEFINE_DATA.filter_url) : ''; // current search parameters
 
 	function reefine_ajax_init() {
 

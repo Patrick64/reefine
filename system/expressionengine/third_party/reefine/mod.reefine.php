@@ -1032,7 +1032,7 @@ class Reefine {
 		$qs = array();
 		// for each tag in reefine's url="" parameter
 		foreach ($this->filter_groups as $group) {
-			$qs = array_merge($qs,$group->get_filter_querystring_from_filter_values($filter_values[$group->group_name]));
+			if (isset($filter_values[$group->group_name])) $qs = array_merge($qs,$group->get_filter_querystring_from_filter_values($filter_values[$group->group_name]));
 		}
 		$current_url = $this->EE->uri->uri_string();
 		// remove page number, we want to start at Page 1 each time.
@@ -1134,6 +1134,13 @@ class Reefine {
 		return (strpos($this->tagdata, '{'.$tag.'}')!==false);	
 	}
 	
+	function get_client_json() {
+		return json_encode(array(
+			'filter_url'=>$this->get_filter_url(),
+			'filter_values'=>$this->filter_values
+		));
+	}
+		
 	// create tag data
 	private function get_tag_data_result($results) {
 		$delimiter = '|';
@@ -1148,6 +1155,7 @@ class Reefine {
 		$tag['number_range_groups'] = array();
 		$tag['tree_groups'] = array();
 		$tag['method'] = $this->method;
+		$tag['client_json'] = $this->get_client_json();
 		
 		$entry_ids = '';
 

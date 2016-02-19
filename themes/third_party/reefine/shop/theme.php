@@ -31,6 +31,7 @@ class Reefine_theme_custom extends Reefine_theme
 						$content .
 						'</div>';
 				if ($this->module->method=='ajax')
+					$this->module->tagdata .= '<script>var REEFINE_DATA = ' . $this->module->get_client_json() . ';  </script> ';
 					$this->module->tagdata .= '<script type="text/javascript" src="' . $theme_url . 'ajax.js"></script>';
 			}
 
