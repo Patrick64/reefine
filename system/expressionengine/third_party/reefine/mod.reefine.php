@@ -209,7 +209,7 @@ class Reefine {
 			//
 
 			//get a unique id of this particular search.
-			$this->filter_id = md5(serialize($this->filter_groups));
+			// $this->filter_id = md5(serialize($this->filter_groups));
 
 			
 			// change expressione ngin uri so paging works
