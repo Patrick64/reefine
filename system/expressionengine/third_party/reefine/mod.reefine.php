@@ -496,10 +496,11 @@ class Reefine {
 			
 			if ($logic_not) {
 				$sql = ' (exp_channel_data.entry_id NOT IN (SELECT entry_id FROM exp_category_posts WHERE cat_id IN (' . implode(', ',$categories) . '))) ';
-			} elseif ($logic_or) {
-				$sql = ' (exp_channel_data.entry_id IN (SELECT entry_id FROM exp_category_posts WHERE cat_id IN (' . implode(', ',$categories) . '))) ';
 			} elseif ($logic_and) {
 				// @todo
+				throw new Exception('Sorry, AND operator not supported in Reefine',E_WARNING);
+			} else { // $logic_or
+				$sql = ' (exp_channel_data.entry_id IN (SELECT entry_id FROM exp_category_posts WHERE cat_id IN (' . implode(', ',$categories) . '))) ';
 			}
 			$this->search_field_where_clause .= $sql;
 		}
