@@ -120,7 +120,12 @@ class Reefine {
 	 * @var string
 	 */
 	var $category = '';
-	
+
+	/**
+	 * Entry id array to search by only these entry ids
+	 * @var string
+	 */
+	var $entry_id = '';
 	/**
 	 * Restrict search results to entries with Start date after start_on only
 	 * @var unknown
@@ -466,6 +471,11 @@ class Reefine {
 		if (!empty($this->EE->TMPL->tagparams['category'])) {
 			$this->limit_by_category_ids($this->EE->TMPL->tagparams['category']);
 		}
+		
+		// category_url parameter limits results to just the the category_url
+		if (!empty($this->EE->TMPL->tagparams['entry_id'])) {
+			$this->limit_by_entry_ids($this->EE->TMPL->tagparams['entry_id']);
+		}
 
 	}
 	
@@ -506,7 +516,13 @@ class Reefine {
 		}
 	}
 	 
-	
+	function limit_by_entry_ids($entry_id) {
+		if (preg_match_all('/\d+/',$entry_id,$matches)) {
+			$entry_ids = $matches[0];
+			$sql = ' (exp_channel_data.entry_id IN (' . implode(', ',$entry_ids) . ')) ';
+			$this->search_field_where_clause .= $sql;
+		}
+	}
 	
 	/**
 	 * get settings from tag parameters
