@@ -5,7 +5,9 @@ class Reefine_group_date_range extends Reefine_group {
 		parent::__construct($reefine,$group_name);
 		$this->show_empty_filters=true;
 	}
-
+	private function is_date($d) {
+		return preg_match('/\d\d\d\d\-\d\d\-\d\d/',$d);
+	}
 	public function get_filter_values_from_url($tag_value,$url_tag) {
 		// if the value of the tag is not "any" then add the value
 		if ($tag_value!=$url_tag['any_text'] && $tag_value!='') {
@@ -253,11 +255,11 @@ class Reefine_group_date_range extends Reefine_group {
 			throw("Reefine group date range is unfinished");
 			foreach ($this->fields as $field) {
 
-				if (isset($this->values['min']) && is_numeric($this->values['min'])) {
+				if (isset($this->values['min']) && $this->is_date($this->values['min'])) {
 					$value = $this->db->escape_str($this->values['min']);
 					$min_clauses[] = "({$this->get_field_value_column($field)}<>'' AND CAST({$this->get_field_value_column($field)} AS DECIMAL(25,4)) >= {$value})";
 				}
-				if (isset($this->values['max']) && is_numeric($this->values['max'])) {
+				if (isset($this->values['max']) && $this->is_date($this->values['max'])) {
 					$value = $this->db->escape_str($this->values['max']);
 					$max_clauses[] = "({$this->get_field_value_column($field)}<>'' AND CAST({$this->get_field_value_column($field)} AS DECIMAL(25,4)) <= {$value})";
 				}
