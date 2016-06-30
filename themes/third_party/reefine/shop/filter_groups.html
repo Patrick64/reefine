@@ -99,6 +99,22 @@
 			</form>
 			{/filters}
 		{/number_range_groups}
+		{date_range_groups}
+			{filters} 
+			<h3 class="group_{group_name}">{label}</h3>			
+			<form method="post" class="date_range"  action="{url}">
+			<input type="hidden" name="XID" value="{XID_HASH}" /> 
+				<label for="{group_name}_min" >Start date</label>
+				<input type="date" name="{group_name}_min" id="{group_name}_min" placeholder="{filter_min}"
+					value="{filter_min_value}" aria-label="Minimum value"/>
+				<label for="{group_name}_max" >End date</label> 
+				<input type="date" name="{group_name}_max" id="{group_name}_max" placeholder="{filter_max}"
+					value="{filter_max_value}" aria-label="Maximum value"/>
+			 
+				<input type="submit" name="submit" value="Go" />
+			</form>
+			{/filters}
+		{/date_range_groups}
 	</div>
 </div>
 </div>
