@@ -1169,6 +1169,7 @@ class Reefine {
 		$tag['active_groups'] = array();
 		$tag['search_groups'] = array();
 		$tag['list_groups'] = array();
+		$tag['date_range_groups'] = array();
 		$tag['number_range_groups'] = array();
 		$tag['tree_groups'] = array();
 		$tag['method'] = $this->method;
@@ -3603,12 +3604,18 @@ class Reefine_group_month_list extends Reefine_group_list {
 		$field_list = array();
 		foreach ($in_list as $value) {
 				
-			$month_value = "DATE_ADD(LAST_DAY(DATE_SUB(DATE({$value}), interval 30 day)), interval 1 day)";
-			$min_column = $this->get_field_value_column($this->fields[0]);
+			//$month_value = "DATE_ADD(LAST_DAY(DATE_SUB(DATE({$value}), interval 30 day)), interval 1 day)";
+			$month_value = " ( YEAR(DATE({$value}))*12 + MONTH(DATE({$value})) ) ";
+			$min_value =  $this->get_field_value_column($this->fields[0]); 
+			$min_column = " ( YEAR(DATE({$min_value}))*12 + MONTH(DATE({$min_value})) ) ";
+			
 			$statement = "{$min_column} = {$month_value}";
-				
+			
 			if (count($this->fields)>1) {
-				$max_column = $this->get_field_value_column($this->fields[1]);
+				$max_value =  $this->get_field_value_column($this->fields[1]);
+				$max_column = " ( YEAR(DATE({$max_value}))*12 + MONTH(DATE({$max_value})) ) ";
+					
+				
 				$statement = "( {$statement} OR ({$this->fields[1]->get_value_column()}<>'' " .
 				" AND {$month_value} between {$min_column} AND {$max_column} ) )";
 			}
