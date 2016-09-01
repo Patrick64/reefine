@@ -1,9 +1,13 @@
 <?php
 class Reefine_group_date_range extends Reefine_group {
 	public $type = 'date_range';
+	private $min_field_alias = '';
+	private $max_field_alias = '';
 	function __construct($reefine,$group_name) {
 		parent::__construct($reefine,$group_name);
 		$this->show_empty_filters=true;
+		$this->min_field_alias = preg_replace('/[^A-Z0-9]/i','_',$group_name) . '_min';
+		$this->max_field_alias = preg_replace('/[^A-Z0-9]/i','_',$group_name) . '_max';
 	}
 	private function is_date($d) {
 		return preg_match('/\d\d\d\d\-\d\d\-\d\d/',$d);
@@ -28,6 +32,22 @@ class Reefine_group_date_range extends Reefine_group {
 		
 			return $filter_values;
 		}
+	}
+	
+	public function get_join_sql() {
+		$min_field = $this->fields[0];
+		$max_field = $this->fields[1];
+		//$join_equality = $this->join=='not' ? '!=' : '=';
+		$where_clause = implode(' AND ', $this->get_where_clause_for_join());
+		
+		$joins=array("LEFT OUTER JOIN (SELECT entry_id, 
+				min({$this->get_field_value_column($min_field)}) as {$this->min_field_alias},
+				max({$this->get_field_value_column($max_field)}) as {$this->max_field_alias} 
+			FROM {$min_field->table_name} {$min_field->table_alias}
+			WHERE {$where_clause} group by entry_id) {$min_field->table_alias}
+		ON {$min_field->table_alias}.entry_id = {$min_field->channel_data_alias}.entry_id ");
+		
+		return $joins;
 	}
 	
 	
@@ -67,20 +87,12 @@ class Reefine_group_date_range extends Reefine_group {
 		$filter_min_fields = array();
 		$filter_max_fields = array();
 
-		foreach ($this->fields as $field) {
-			$filter_min_fields[] = "min(IF({$this->get_field_value_column($field)}='',999999999999,CAST({$this->get_field_value_column($field)} AS DECIMAL(25,4))))";
-			$filter_max_fields[] = "max(IF({$this->get_field_value_column($field)}='',-999999999999,CAST({$this->get_field_value_column($field)} AS DECIMAL(25,4))))";
-		}
-		// if theres just one field
-		if (count($this->fields)==1) {
-			// get the min/max of that field
-			$filter_min_sql = $filter_min_fields[0];
-			$filter_max_sql = $filter_max_fields[0];
-		} else {
-			// otherwise construct a least/great statement for all fields
-			$filter_min_sql = "LEAST(" . implode(',',$filter_min_fields) . ")";
-			$filter_max_sql = "GREATEST(" . implode(',',$filter_max_fields) . ")";
-		}
+
+		$filter_min_fields[] = "min(IF({$this->min_field_alias}='',999999999999,CAST({$this->min_field_alias} AS DECIMAL(25,4))))";
+		$filter_max_fields[] = "max(IF({$this->max_field_alias}='',-999999999999,CAST({$this->max_field_alias} AS DECIMAL(25,4))))";
+		// get the min/max of that field
+		$filter_min_sql = $filter_min_fields[0];
+		$filter_max_sql = $filter_max_fields[0];
 
 		$sql = "SELECT count(distinct({$this->dbprefix}channel_data.entry_id)) as filter_quantity, " .
 		"{$filter_min_sql} as filter_min, " .
@@ -215,6 +227,12 @@ class Reefine_group_date_range extends Reefine_group {
 
 
 	public function get_where_clause() {
+		$min_field = $this->fields[0];
+		$join_equality = $this->join=='not' ? ' IS NULL' : ' IS NOT NULL ';
+		return array("( {$min_field->table_alias}.entry_id {$join_equality} )");	
+	}
+	
+	private function get_where_clause_for_join() {
 		$min_clauses = array();
 		$max_clauses = array();
 		$clauses = array();
@@ -244,11 +262,8 @@ class Reefine_group_date_range extends Reefine_group {
 						// minColumn value must be less than or equal to maxValue
 						$range_clause = " ({$minColumn}<>'' AND DATE(FROM_UNIXTIME({$minColumn})) <= DATE('{$maxValue}')) ";
 					}		
-					if ($range_clause!="" && $this->join=="not" ) {
-						$clauses[] = " (NOT  " . $range_clause . " ) "; 
-					} else if ($range_clause!="") {
-						$clauses[] =  $range_clause;
-					}
+
+					$clauses[] =  $range_clause;
 // 				}	
 // 			}
 		} else if (isset($this->fields) && count($this->values)>0) {
@@ -265,6 +280,10 @@ class Reefine_group_date_range extends Reefine_group {
 				}
 			}
 				
+		} else {
+			// nothing specified so just put in 1=1 so it doesn't error
+			
+			$clauses[] = ' 1 = 1 ';
 		}
 		if (count($min_clauses)>0)
 			$clauses[] = '(' . implode(' OR ',$min_clauses) . ')';

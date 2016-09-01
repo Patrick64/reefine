@@ -1513,9 +1513,9 @@ class Reefine_field {
 	 */
 	protected $db_column;
 	
-	protected $channel_data_alias = '';
+	public $channel_data_alias = '';
 	
-	protected $channel_titles_alias = '';
+	public $channel_titles_alias = '';
 	
 	function __construct($reefine, $field_name,$parent_field_name='',$child_field_name='') {
 		
@@ -2212,6 +2212,7 @@ class Reefine_field_matrix extends Reefine_field {
 	private $parent_field_name;
 	public $table_alias;
 	private $grid_field;
+	public $table_name;
 
 	function __construct($reefine,$field_name,$parent_field_name,$child_field_name) {
 		parent::__construct($reefine, $parent_field_name);
@@ -2225,6 +2226,7 @@ class Reefine_field_matrix extends Reefine_field {
 		$this->grid_field = $grid_fields->get_grid_field($this->ee_field_info['field_id'],$child_field_name);
 
 		$this->table_alias = 'matrix_' . $this->grid_field['field_id']; //preg_replace('/[^A-Z0-9]/i','_',$this->relation_field_id);
+		$this->table_name = "{$this->reefine->dbprefix}matrix_data";
 
 	}
 
