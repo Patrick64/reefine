@@ -3,21 +3,22 @@
 
 # Except..
 !.gitignore
-!themes/
-!themes/third_party
-!themes/third_party/reefine
-!themes/third_party/reefine/*
-!themes/third_party/reefine/*/*
-!themes/third_party/reefine/*/*/*
-!system/
-!system/expressionengine
-!system/expressionengine/third_party
-!system/expressionengine/third_party/reefine
-!system/expressionengine/third_party/reefine/*
-!system/expressionengine/third_party/reefine/*/*
-!system/expressionengine/third_party/reefine/*/*/*
-!docs
-!docs/*
-!docs/*/*
+!ee2/
+!ee2/themes/
+!ee2/themes/third_party
+!ee2/themes/third_party/reefine
+!ee2/themes/third_party/reefine/*
+!ee2/themes/third_party/reefine/*/*
+!ee2/themes/third_party/reefine/*/*/*
+!ee2/system/
+!ee2/system/expressionengine
+!ee2/system/expressionengine/third_party
+!ee2/system/expressionengine/third_party/reefine
+!ee2/system/expressionengine/third_party/reefine/*
+!ee2/system/expressionengine/third_party/reefine/*/*
+!ee2/system/expressionengine/third_party/reefine/*/*/*
+!ee2/docs
+!ee2/docs/*
+!ee2/docs/*/*
 
 
