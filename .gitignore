@@ -21,4 +21,21 @@
 !ee2/docs/*
 !ee2/docs/*/*
 
+!ee3/
+!ee3/themes/
+!ee3/themes/user
+!ee3/themes/user/reefine
+!ee3/themes/user/reefine/*
+!ee3/themes/user/reefine/*/*
+!ee3/themes/user/reefine/*/*/*
+!ee3/system/
+!ee3/system/user
+!ee3/system/user/addons
+!ee3/system/user/addons/reefine
+!ee3/system/user/addons/reefine/*
+!ee3/system/user/addons/reefine/*/*
+!ee3/system/user/addons/reefine/*/*/*
+!ee3/docs
+!ee3/docs/*
+!ee3/docs/*/*
 
