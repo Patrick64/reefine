@@ -1674,7 +1674,7 @@ class Reefine_field_category extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		return "cat_{$this->group_name}.cat_url_title";
 	}
 
@@ -1764,7 +1764,7 @@ class Reefine_field_store extends Reefine_field {
 	}
 	
 	
-	function get_value_column() {
+	function get_value_column($table='') {
 		if ($this->child_column=='on_sale') 
 			return "(CASE WHEN {$this->sales_alias}.enabled = 1 THEN '1' ELSE '' END)";			
 		else
@@ -1836,7 +1836,7 @@ class Reefine_field_publisher extends Reefine_field {
 		
 	}
 	
-	function get_value_column() {
+	function get_value_column($table='') {
 		if ($this->get_field_by_key($this->field_name,'is_title_field')) // if it's a column that's normally in channel_titles
 			return "IFNULL( {$this->table_alias_titles}.{$this->db_column} , {$this->channel_titles_alias}.{$this->db_column}) " ;
 		else
@@ -1894,7 +1894,7 @@ class Reefine_field_playa extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		if ($this->child_field_name=='')
 			// Return url_title so we get a nice url for list filters
 			return "{$this->table_alias_titles}.url_title";
@@ -1970,7 +1970,7 @@ class Reefine_field_publisher_playa extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		if ($this->child_field_name=='')
 			// Return url_title so we get a nice url for list filters
 			return "{$this->table_alias_titles}.url_title";
@@ -2048,7 +2048,7 @@ class Reefine_field_grid extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		return "{$this->table_alias}.col_id_{$this->grid_field['col_id']}"; // . $this->get_field_by_key($this->child_field_name,'field_column');
 	}
 
@@ -2129,7 +2129,7 @@ class Reefine_field_matrix extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		return "{$this->table_alias}.col_id_{$this->grid_field['col_id']}"; // . $this->get_field_by_key($this->child_field_name,'field_column');
 	}
 
