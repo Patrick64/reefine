@@ -2724,7 +2724,19 @@ class Reefine_group {
 		}
 		$group['active_filter_values'] = $filter_values;
 		
+		// add up total number of results
+		$filter_total_results=0;
+		foreach ($this->filters as $filter_key => $filter) {
+			$filter_active = $filter['filter_active'];
+			$filter_quantity = $filter['filter_quantity'];
+			// Check that - if only show active then only show if active ALSO if hide empty filters then only show if filter is not empty or is active
+			if ( (!$only_show_active || $filter_active) &&  ($this->show_empty_filters || $filter_active || $filter_quantity>0) )  {
+				$filter_total_results++;
+			}
+		}
+
 		$active_index = 0;
+		$filter_count = 1;
 		foreach ($this->filters as $filter_key => $filter) {
 			$filter_active = $filter['filter_active'];
 			$filter_quantity = $filter['filter_quantity'];
@@ -2740,7 +2752,8 @@ class Reefine_group {
 				$filter_out['active_index'] = $active_index;
 				$filter_out['filter_active_class'] = ( $filter_active ? 'active' : 'inactive' );
 				$filter_out['filter_active_boolean'] = ( $filter_active ? 'true' : 'false' );
-				
+				$filter_out['count'] = $filter_count;
+				$filter_out['total_results'] = $filter_total_results;
 				// stop xss
 				foreach ($filter as $key => $val) {
 					$filter_out[$key] = htmlspecialchars($val, ENT_QUOTES);
@@ -2750,6 +2763,7 @@ class Reefine_group {
 				$this->format_filter_for_output($filter,$filter_out);
 				
 				$group['filters'][] = $filter_out;
+				$filter_count++;
 			}
 		}
 		
