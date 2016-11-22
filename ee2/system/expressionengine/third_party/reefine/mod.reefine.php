@@ -1674,7 +1674,7 @@ class Reefine_field_category extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		return "cat_{$this->group_name}.cat_url_title";
 	}
 
@@ -1764,7 +1764,7 @@ class Reefine_field_store extends Reefine_field {
 	}
 	
 	
-	function get_value_column() {
+	function get_value_column($table='') {
 		if ($this->child_column=='on_sale') 
 			return "(CASE WHEN {$this->sales_alias}.enabled = 1 THEN '1' ELSE '' END)";			
 		else
@@ -1836,7 +1836,7 @@ class Reefine_field_publisher extends Reefine_field {
 		
 	}
 	
-	function get_value_column() {
+	function get_value_column($table='') {
 		if ($this->get_field_by_key($this->field_name,'is_title_field')) // if it's a column that's normally in channel_titles
 			return "IFNULL( {$this->table_alias_titles}.{$this->db_column} , {$this->channel_titles_alias}.{$this->db_column}) " ;
 		else
@@ -1894,7 +1894,7 @@ class Reefine_field_playa extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		if ($this->child_field_name=='')
 			// Return url_title so we get a nice url for list filters
 			return "{$this->table_alias_titles}.url_title";
@@ -1970,7 +1970,7 @@ class Reefine_field_publisher_playa extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		if ($this->child_field_name=='')
 			// Return url_title so we get a nice url for list filters
 			return "{$this->table_alias_titles}.url_title";
@@ -2048,7 +2048,7 @@ class Reefine_field_grid extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		return "{$this->table_alias}.col_id_{$this->grid_field['col_id']}"; // . $this->get_field_by_key($this->child_field_name,'field_column');
 	}
 
@@ -2129,7 +2129,7 @@ class Reefine_field_matrix extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		return "{$this->table_alias}.col_id_{$this->grid_field['col_id']}"; // . $this->get_field_by_key($this->child_field_name,'field_column');
 	}
 
@@ -2724,7 +2724,19 @@ class Reefine_group {
 		}
 		$group['active_filter_values'] = $filter_values;
 		
+		// add up total number of results
+		$filter_total_results=0;
+		foreach ($this->filters as $filter_key => $filter) {
+			$filter_active = $filter['filter_active'];
+			$filter_quantity = $filter['filter_quantity'];
+			// Check that - if only show active then only show if active ALSO if hide empty filters then only show if filter is not empty or is active
+			if ( (!$only_show_active || $filter_active) &&  ($this->show_empty_filters || $filter_active || $filter_quantity>0) )  {
+				$filter_total_results++;
+			}
+		}
+
 		$active_index = 0;
+		$filter_count = 1;
 		foreach ($this->filters as $filter_key => $filter) {
 			$filter_active = $filter['filter_active'];
 			$filter_quantity = $filter['filter_quantity'];
@@ -2740,7 +2752,8 @@ class Reefine_group {
 				$filter_out['active_index'] = $active_index;
 				$filter_out['filter_active_class'] = ( $filter_active ? 'active' : 'inactive' );
 				$filter_out['filter_active_boolean'] = ( $filter_active ? 'true' : 'false' );
-				
+				$filter_out['count'] = $filter_count;
+				$filter_out['total_results'] = $filter_total_results;
 				// stop xss
 				foreach ($filter as $key => $val) {
 					$filter_out[$key] = htmlspecialchars($val, ENT_QUOTES);
@@ -2750,6 +2763,7 @@ class Reefine_group {
 				$this->format_filter_for_output($filter,$filter_out);
 				
 				$group['filters'][] = $filter_out;
+				$filter_count++;
 			}
 		}
 		
