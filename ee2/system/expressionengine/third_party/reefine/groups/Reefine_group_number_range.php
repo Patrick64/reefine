@@ -63,7 +63,7 @@ class Reefine_group_number_range extends Reefine_group {
 		"FROM {$this->dbprefix}channel_data ";
 		//if ($this->include_channel_titles)
 		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
-		$sql .= $this->reefine->get_query_join_sql($this->group_name,false);
+		$sql .= $this->reefine->get_query_join_sql($this->group_name);
 		$sql .= "WHERE 1=1 ";
 		if (isset($this->reefine->channel_ids)) {
 			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";

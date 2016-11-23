@@ -633,7 +633,7 @@ class Reefine {
 	 * @param bool $is_category_join_required Is category join required (eg for the entries search where it may required if the category id is in the where clause)
 	 * @return string
 	 */
-	public function get_query_join_sql($include_group,$is_category_join_required) {
+	public function get_query_join_sql($include_group,$is_category_join_required = true) {
 		$joins = array();
 		
 		// also left outer join categories if the category or category_url
@@ -647,9 +647,12 @@ class Reefine {
 		foreach ($this->filter_groups as $key => $group) {
 			// If group has values
 			if ($key==$include_group || (isset($group->values) && count($group->values)>0)) {
-				$joins = array_merge($joins,$group->get_join_sql());
-				//if ($is_category_join_required || $group->join=='or' || $group->join=='none' || $include_group==$key)
-				//	$joins = array_merge($joins,$group->get_category_join_sql());
+				// add join if this group is a category group or category join is required anyway
+				if ($is_category_join_required || (!is_a($group,'Reefine_group_category'))) {
+					$joins = array_merge($joins,$group->get_join_sql());
+					//if ($is_category_join_required || $group->join=='or' || $group->join=='none' || $include_group==$key)
+					//	$joins = array_merge($joins,$group->get_category_join_sql());
+				}
 			}
 		}
 		// remove duplicates
@@ -2928,7 +2931,7 @@ class Reefine_group_list extends Reefine_group {
 			
 		//if ($this->include_channel_titles)
 		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
-		$sql .= $this->reefine->get_query_join_sql($this->group_name,false);
+		$sql .= $this->reefine->get_query_join_sql($this->group_name);
 		$sql .= " WHERE {$column_name} <> '' ";
 		if (isset($this->reefine->channel_ids)) {
 			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
@@ -3253,10 +3256,12 @@ class Reefine_group_category extends Reefine_group_list {
 		$sql .= " GROUP BY p1.cat_id , p1.entry_id) pp ";
 		
 		//if (isset($this->reefine->channel_ids)) {
-			$sql .= " INNER JOIN {$this->dbprefix}channel_data on pp.entry_id = {$this->dbprefix}channel_data.entry_id \n";
-			$sql .= " INNER JOIN {$this->dbprefix}channel_titles on pp.entry_id = {$this->dbprefix}channel_titles.entry_id \n";
-			if (isset($this->reefine->channel_ids)) $sql .= " and {$this->dbprefix}channel_titles.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
+		$sql .= " INNER JOIN {$this->dbprefix}channel_data on pp.entry_id = {$this->dbprefix}channel_data.entry_id \n";
+		$sql .= " INNER JOIN {$this->dbprefix}channel_titles on pp.entry_id = {$this->dbprefix}channel_titles.entry_id \n";
+		if (isset($this->reefine->channel_ids)) $sql .= " and {$this->dbprefix}channel_titles.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
+		
 		//}
+			$sql .= $this->reefine->get_query_join_sql($this->group_name,false);
 		if ($extra_clause!='') {
 			//$sql .= " AND ({$extra_clause}) ";
 		}
@@ -3656,7 +3661,7 @@ class Reefine_group_month_list extends Reefine_group_list {
 		"FROM {$this->dbprefix}channel_data ";
 		//if ($this->include_channel_titles)
 		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
-		$sql .= $this->reefine->get_query_join_sql($this->group_name,false);
+		$sql .= $this->reefine->get_query_join_sql($this->group_name);
 		$sql .= "WHERE 1=1 ";
 		if (isset($this->reefine->channel_ids)) {
 			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
