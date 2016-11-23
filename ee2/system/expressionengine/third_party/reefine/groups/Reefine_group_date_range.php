@@ -226,7 +226,7 @@ class Reefine_group_date_range extends Reefine_group {
 	}
 
 
-	public function get_where_clause() {
+	public function get_group_where_clause() {
 		$min_field = $this->fields[0];
 		$join_equality = $this->join=='not' ? ' IS NULL' : ' IS NOT NULL ';
 		return array("( {$min_field->table_alias}.entry_id {$join_equality} )");	
