@@ -3204,6 +3204,11 @@ class Reefine_group_category extends Reefine_group_list {
 	public function get_filter_groups_for_list($column_name,$title_column_name,$filter_column_id = '',$extra_columns = array(), $extra_clause = '', $order_by = '') {
 		// have to give up on active record select coz of this bug: http://stackoverflow.com/questions/7927458/codeigniter-db-select-strange-behavior
 	
+		if ($this->join=='or' || $this->join=='none')
+			$entries_where_clause = $this->reefine->get_filter_fields_where_clause($this->group_name);
+		else // join is 'and' so use current filter
+			$entries_where_clause = $this->reefine->filter_where_clause;
+		
 		
 		$sql = " /* Reefine_group_category->get_filter_groups_for_list({$column_name}..) */
 		SELECT 
@@ -3245,11 +3250,17 @@ class Reefine_group_category extends Reefine_group_list {
 		
 		$sql .= " GROUP BY p1.cat_id , p1.entry_id) pp ";
 		
-		if (isset($this->reefine->channel_ids)) {
-			$joins[] = " INNER JOIN {$this->dbprefix}channel_data 
-				on pp.entry_id = {$this->dbprefix}channel_data.entry_id and {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
+		//if (isset($this->reefine->channel_ids)) {
+			$sql .= " INNER JOIN {$this->dbprefix}channel_data on pp.entry_id = {$this->dbprefix}channel_data.entry_id \n";
+			$sql .= " INNER JOIN {$this->dbprefix}channel_titles on pp.entry_id = {$this->dbprefix}channel_titles.entry_id \n";
+			if (isset($this->reefine->channel_ids)) $sql .= " and {$this->dbprefix}channel_titles.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
+		//}
+		if ($extra_clause!='') {
+			//$sql .= " AND ({$extra_clause}) ";
 		}
-		
+		if ($entries_where_clause) {
+			$sql .= " \n WHERE " . $entries_where_clause . " \n";
+		}
 		
 		 
 		$sql .= "
