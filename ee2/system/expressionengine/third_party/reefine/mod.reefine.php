@@ -685,13 +685,13 @@ class Reefine {
 	 * @param string $ignore_filter_group Filter group key to ignore, useful for fields that aren't exclusive
 	 * @return string SQL where clause to be used for selecting channel entries or the getting counts for filters
 	 */
-	function get_filter_fields_where_clause($ignore_filter_group = '') {
+	function get_filter_fields_where_clause($ignore_filter_group = '', $exclude_categories = false) {
 		$clauses = array();
 		//// make where statement based on filter fields
 		foreach ($this->filter_groups as $key => $group) {
 			// If the field has some selected values and it's not one to ignore..
 			if ($ignore_filter_group!=$key && isset($group->values) && count($group->values)>0) {
-				$clauses = array_merge($clauses,$group->get_where_clause());
+				$clauses = array_merge($clauses,$group->get_group_where_clause($exclude_categories));
 			}
 		}
 
@@ -2784,7 +2784,7 @@ class Reefine_group {
 		// abstract	
 	}
 	
-	public function get_where_clause() {
+	public function get_group_where_clause($exclude_categories = false) {
 		//abstract
 		return array();
 	}
@@ -2969,7 +2969,7 @@ class Reefine_group_list extends Reefine_group {
 	}
 	
 	// construct the where clause for a group of type "list"
-	public function get_where_clause() {
+	public function get_group_where_clause($exclude_categories = false) {
 		$clauses = array();
 		if (!isset($this->category_group))
 			$this->category_group=array();
@@ -3129,7 +3129,7 @@ class Reefine_group_search extends Reefine_group {
 	}
 	
 	//
-	public function get_where_clause() {
+	public function get_group_where_clause($exclude_categories = false) {
 		$clauses = array();
 		if (isset($this->fields) && count($this->values)>0) {
 			$search_terms = array();
@@ -3204,10 +3204,12 @@ class Reefine_group_category extends Reefine_group_list {
 	public function get_filter_groups_for_list($column_name,$title_column_name,$filter_column_id = '',$extra_columns = array(), $extra_clause = '', $order_by = '') {
 		// have to give up on active record select coz of this bug: http://stackoverflow.com/questions/7927458/codeigniter-db-select-strange-behavior
 	
-		if ($this->join=='or' || $this->join=='none')
-			$entries_where_clause = $this->reefine->get_filter_fields_where_clause($this->group_name);
-		else // join is 'and' so use current filter
-			$entries_where_clause = $this->reefine->filter_where_clause;
+		if ($this->join=='or' || $this->join=='none') {
+			$entries_where_clause = $this->reefine->get_filter_fields_where_clause($this->group_name,true);
+		} else { // join is 'and' so use current filter
+			//$entries_where_clause = $this->reefine->filter_where_clause;
+			$entries_where_clause = $this->reefine->get_filter_fields_where_clause('',true);
+		}
 		
 		
 		$sql = " /* Reefine_group_category->get_filter_groups_for_list({$column_name}..) */
@@ -3320,6 +3322,14 @@ class Reefine_group_category extends Reefine_group_list {
 		
 			return  " INNER JOIN exp_category_posts {$table_alias} ON {$entry_id_column} = {$table_alias}.entry_id 
 				AND ( " . implode (' OR ', $or_statements) . " )"; 
+		}
+	}
+	
+	public function get_group_where_clause($exclude_categories = false) {
+		if ($exclude_categories) {
+			return array();	
+		} else {
+			return parent::get_group_where_clause(false);
 		}
 	}
 	
@@ -3703,7 +3713,7 @@ class Reefine_group_month_list extends Reefine_group_list {
 	}
 	
 	// construct the where clause for a group of type "list"
-	public function get_where_clause() {
+	public function get_group_where_clause($exclude_categories = false) {
 		$clauses = array();
 
 		// a filter group can have many fields so go through each
