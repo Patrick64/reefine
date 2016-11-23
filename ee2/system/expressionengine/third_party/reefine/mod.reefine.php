@@ -1700,7 +1700,7 @@ class Reefine_field_category extends Reefine_field {
 	}
 	
 	function get_filter_order_by() {
-		return "ORDER BY group_id,parent_id, cat_order ";
+		return "ORDER BY group_id,parent_id, cat_order, filter_title ";
 	}
 	
 	function get_join_sql() {
@@ -1708,9 +1708,9 @@ class Reefine_field_category extends Reefine_field {
 		
 		if (count($this->group_ids) > 0) {
 			$joins[] = "LEFT OUTER JOIN {$this->dbprefix}category_posts catp_{$this->group_name} " .
-			"ON catp_{$this->group_name}.entry_id = {$this->dbprefix}channel_data.entry_id \n" .
-			"LEFT OUTER JOIN {$this->dbprefix}categories cat_{$this->group_name} " .
-			"ON cat_{$this->group_name}.cat_id = catp_{$this->group_name}.cat_id AND cat_{$this->group_name}.group_id IN {$this->cat_group_in_list} \n" ;
+			"ON catp_{$this->group_name}.entry_id = {$this->dbprefix}channel_data.entry_id \n";
+			//"LEFT OUTER JOIN {$this->dbprefix}categories cat_{$this->group_name} " .
+			//"ON cat_{$this->group_name}.cat_id = catp_{$this->group_name}.cat_id AND cat_{$this->group_name}.group_id IN {$this->cat_group_in_list} \n" ;
 		}
 		
 		return $joins;
@@ -1726,7 +1726,14 @@ class Reefine_field_category extends Reefine_field {
 	 */
 	function get_where_clause($filter_group,$in_list=false,$value=false) {
 		if ($filter_group->join=='or' || $filter_group->join=='none') {
-			return " ( cat_{$this->group_name}.cat_url_title IN (" . implode(',',$in_list) . ") AND cat_{$this->group_name}.group_id IN {$this->cat_group_in_list})";
+			//return " ( cat_{$this->group_name}.cat_url_title IN (" . implode(',',$in_list) . ") AND cat_{$this->group_name}.group_id IN {$this->cat_group_in_list})";
+			$cats = Reefine_group_category::get_active_categories($this->reefine);
+			$cat_ids = array();
+			foreach ($cats as $cat) {
+				if (in_array($cat->cat_url_title, $this->filter_group->values)) $cat_ids[] = $cat->cat_id;
+			}
+			return " ( catp_{$this->group_name}.cat_id IN (" . implode(',',$cat_ids) . ") )";
+			
 		} else { // AND
 			return "{$this->dbprefix}channel_data.entry_id IN (SELECT exp_category_posts.entry_id " .
 					"FROM exp_category_posts " .
@@ -3156,7 +3163,7 @@ class Reefine_group_category extends Reefine_group_list {
 		parent::__construct($reefine,$group_name);
 	}
 	
-	static public function load_active_categories($reefine) {
+	static public function get_active_categories($reefine) {
 		if (self::$active_categories === false) {
 			self::$active_categories = array();
 			$clauses = array();
@@ -3176,8 +3183,11 @@ class Reefine_group_category extends Reefine_group_list {
 					$sql = "select cat_id, cat_name, cat_url_title from exp_categories where " . join(' OR ',$clauses);
 					self::$active_categories = ee()->db->query($sql,$params)->result();
 				}
-			}			
-		}
+			}		
+			
+		} 
+		return self::$active_categories;
+		
 		
 	}
 	
@@ -3277,9 +3287,9 @@ class Reefine_group_category extends Reefine_group_list {
 	
 	
 	public function get_inner_join($entry_id_column, $table_alias) {
-		self::load_active_categories($this->reefine);
+		$active_categories = self::get_active_categories($this->reefine);
 		$cat_ids = array();
-		foreach (self::$active_categories as $cat) {
+		foreach ($active_categories as $cat) {
 			if (array_search($cat->cat_url_title, $this->values) !== false) {
 				$cat_ids[] = $cat->cat_id;
 			} 
