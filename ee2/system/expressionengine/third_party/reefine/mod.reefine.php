@@ -131,7 +131,11 @@ class Reefine {
 	 * @var unknown
 	 */
 	var $start_on = '';
-	
+	/**
+	 * A fixed order of entry ids to order by
+	 * @var unknown
+	 */
+	var $fixed_order = '';
 	
 	/**
 	 * @var array default settings for group if not otherwise specified
@@ -423,6 +427,7 @@ class Reefine {
 		$this->seperate_filters = ($this->EE->TMPL->fetch_param('seperate_filters', '') == 'yes' ? true : false);
 		$this->fix_pagination = ($this->EE->TMPL->fetch_param('fix_pagination') == 'yes' ? true : false);
 		$this->start_on = $this->EE->TMPL->fetch_param('start_on', '');
+		$this->fixed_order = $this->EE->TMPL->fetch_param('fixed_order', '');
 		
 		// get list of channel ids to choose from
 		if (!empty($filter_channel)) {
@@ -1174,21 +1179,32 @@ class Reefine {
 		$tag['tree_groups'] = array();
 		$tag['method'] = $this->method;
 		$tag['client_json'] = $this->get_client_json();
-		
+		$total_entries = count($results);
 		$entry_ids = '';
 
 		if (count($results)==0) {
 			$entry_ids = '-1'; // no entries!
 		} else {
-			// loop through found entries
-			foreach($results as $row)
-			{
-				$entry_ids .= ($entry_ids=='' ? '' : $delimiter).$row['entry_id'];
+			foreach($results as $row) {
+				$entry_ids_arr[] = $row['entry_id'];
+			}
+				
+			if ($this->fixed_order) {
+				$ordered_ids = array();
+				foreach (explode('|',$this->fixed_order) as $id) {
+					if (array_search($id, $entry_ids_arr)!==false) {
+						$ordered_ids[] = $id;
+					}
+				}
+				$total_entries = count($ordered_ids);
+				$entry_ids = implode('|',$ordered_ids);
+			} else {
+				$entry_ids = implode('|',$entry_ids_arr);
 			}
 
 		}
 		$tag['entries'][0]['entry_ids'] = $entry_ids;
-		$tag['entries'][0]['total_entries'] = count($results);
+		$tag['entries'][0]['total_entries'] = $total_entries;
 
 
 		
@@ -1674,7 +1690,7 @@ class Reefine_field_category extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		return "cat_{$this->group_name}.cat_url_title";
 	}
 
@@ -1764,7 +1780,7 @@ class Reefine_field_store extends Reefine_field {
 	}
 	
 	
-	function get_value_column() {
+	function get_value_column($table='') {
 		if ($this->child_column=='on_sale') 
 			return "(CASE WHEN {$this->sales_alias}.enabled = 1 THEN '1' ELSE '' END)";			
 		else
@@ -1836,7 +1852,7 @@ class Reefine_field_publisher extends Reefine_field {
 		
 	}
 	
-	function get_value_column() {
+	function get_value_column($table='') {
 		if ($this->get_field_by_key($this->field_name,'is_title_field')) // if it's a column that's normally in channel_titles
 			return "IFNULL( {$this->table_alias_titles}.{$this->db_column} , {$this->channel_titles_alias}.{$this->db_column}) " ;
 		else
@@ -1894,7 +1910,7 @@ class Reefine_field_playa extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		if ($this->child_field_name=='')
 			// Return url_title so we get a nice url for list filters
 			return "{$this->table_alias_titles}.url_title";
@@ -1970,7 +1986,7 @@ class Reefine_field_publisher_playa extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		if ($this->child_field_name=='')
 			// Return url_title so we get a nice url for list filters
 			return "{$this->table_alias_titles}.url_title";
@@ -2048,7 +2064,7 @@ class Reefine_field_grid extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		return "{$this->table_alias}.col_id_{$this->grid_field['col_id']}"; // . $this->get_field_by_key($this->child_field_name,'field_column');
 	}
 
@@ -2129,7 +2145,7 @@ class Reefine_field_matrix extends Reefine_field {
 
 	}
 
-	function get_value_column() {
+	function get_value_column($table='') {
 		return "{$this->table_alias}.col_id_{$this->grid_field['col_id']}"; // . $this->get_field_by_key($this->child_field_name,'field_column');
 	}
 
@@ -2724,7 +2740,19 @@ class Reefine_group {
 		}
 		$group['active_filter_values'] = $filter_values;
 		
+		// add up total number of results
+		$filter_total_results=0;
+		foreach ($this->filters as $filter_key => $filter) {
+			$filter_active = $filter['filter_active'];
+			$filter_quantity = $filter['filter_quantity'];
+			// Check that - if only show active then only show if active ALSO if hide empty filters then only show if filter is not empty or is active
+			if ( (!$only_show_active || $filter_active) &&  ($this->show_empty_filters || $filter_active || $filter_quantity>0) )  {
+				$filter_total_results++;
+			}
+		}
+
 		$active_index = 0;
+		$filter_count = 1;
 		foreach ($this->filters as $filter_key => $filter) {
 			$filter_active = $filter['filter_active'];
 			$filter_quantity = $filter['filter_quantity'];
@@ -2740,7 +2768,8 @@ class Reefine_group {
 				$filter_out['active_index'] = $active_index;
 				$filter_out['filter_active_class'] = ( $filter_active ? 'active' : 'inactive' );
 				$filter_out['filter_active_boolean'] = ( $filter_active ? 'true' : 'false' );
-				
+				$filter_out['count'] = $filter_count;
+				$filter_out['total_results'] = $filter_total_results;
 				// stop xss
 				foreach ($filter as $key => $val) {
 					$filter_out[$key] = htmlspecialchars($val, ENT_QUOTES);
@@ -2750,6 +2779,7 @@ class Reefine_group {
 				$this->format_filter_for_output($filter,$filter_out);
 				
 				$group['filters'][] = $filter_out;
+				$filter_count++;
 			}
 		}
 		

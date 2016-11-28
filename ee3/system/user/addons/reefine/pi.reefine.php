@@ -131,7 +131,11 @@ class Reefine {
 	 * @var unknown
 	 */
 	var $start_on = '';
-	
+	/**
+	 * A fixed order of entry ids to order by
+	 * @var unknown
+	 */
+	var $fixed_order = '';
 	
 	/**
 	 * @var array default settings for group if not otherwise specified
@@ -423,6 +427,7 @@ class Reefine {
 		$this->seperate_filters = ($this->EE->TMPL->fetch_param('seperate_filters', '') == 'yes' ? true : false);
 		$this->fix_pagination = ($this->EE->TMPL->fetch_param('fix_pagination') == 'yes' ? true : false);
 		$this->start_on = $this->EE->TMPL->fetch_param('start_on', '');
+		$this->fixed_order = $this->EE->TMPL->fetch_param('fixed_order', '');
 		
 		// get list of channel ids to choose from
 		if (!empty($filter_channel)) {
@@ -1174,21 +1179,32 @@ class Reefine {
 		$tag['tree_groups'] = array();
 		$tag['method'] = $this->method;
 		$tag['client_json'] = $this->get_client_json();
-		
+		$total_entries = count($results);
 		$entry_ids = '';
 
 		if (count($results)==0) {
 			$entry_ids = '-1'; // no entries!
 		} else {
-			// loop through found entries
-			foreach($results as $row)
-			{
-				$entry_ids .= ($entry_ids=='' ? '' : $delimiter).$row['entry_id'];
+			foreach($results as $row) {
+				$entry_ids_arr[] = $row['entry_id'];
+			}
+				
+			if ($this->fixed_order) {
+				$ordered_ids = array();
+				foreach (explode('|',$this->fixed_order) as $id) {
+					if (array_search($id, $entry_ids_arr)!==false) {
+						$ordered_ids[] = $id;
+					}
+				}
+				$total_entries = count($ordered_ids);
+				$entry_ids = implode('|',$ordered_ids);
+			} else {
+				$entry_ids = implode('|',$entry_ids_arr);
 			}
 
 		}
 		$tag['entries'][0]['entry_ids'] = $entry_ids;
-		$tag['entries'][0]['total_entries'] = count($results);
+		$tag['entries'][0]['total_entries'] = $total_entries;
 
 
 		
