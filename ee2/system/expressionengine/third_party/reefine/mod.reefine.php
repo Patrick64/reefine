@@ -1735,7 +1735,10 @@ class Reefine_field_category extends Reefine_field {
 			foreach ($cats as $cat) {
 				if (in_array($cat->cat_url_title, $this->filter_group->values)) $cat_ids[] = $cat->cat_id;
 			}
-			return " ( catp_{$this->group_name}.cat_id IN (" . implode(',',$cat_ids) . ") )";
+			if (count($cat_ids)>0)
+				return " ( catp_{$this->group_name}.cat_id IN (" . implode(',',$cat_ids) . ") )";
+			else
+				return " 1=1 ";	
 			
 		} else { // AND
 			return "{$this->dbprefix}channel_data.entry_id IN (SELECT exp_category_posts.entry_id " .
@@ -3325,8 +3328,8 @@ class Reefine_group_category extends Reefine_group_list {
 				$or_statements[] = "{$table_alias}.cat_id = {$cat_id}";
 			}
 		
-			return  " INNER JOIN exp_category_posts {$table_alias} ON {$entry_id_column} = {$table_alias}.entry_id 
-				AND ( " . implode (' OR ', $or_statements) . " )"; 
+			$sql = " INNER JOIN exp_category_posts {$table_alias} ON {$entry_id_column} = {$table_alias}.entry_id "; 
+			if (count($or_statements)>0) $sql .= " AND ( " . implode (' OR ', $or_statements) . " )"; 
 		}
 	}
 	
