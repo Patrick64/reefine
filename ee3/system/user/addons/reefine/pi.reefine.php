@@ -432,8 +432,10 @@ class Reefine {
 		// get list of channel ids to choose from
 		if (!empty($filter_channel)) {
 			$this->channel_ids = $this->get_channel_ids($filter_channel);
+			if (count($this->channel_ids)==0) 
+				throw new Exception("Reefine error: Channel not found " . $filter_channel);
 		}
-
+		
 		// read filter:fields="" tag
 		$this->get_field_filters_from_parameters();
 
@@ -1295,6 +1297,7 @@ class Reefine {
 				$this->_custom_fields[$site_id]['title'] = array('field_type' => 'text','field_name' => 'title','site_id' => $site_id, 'field_label' => 'title', 'field_column' => 'title',  'is_title_field' => 1 );
 				$this->_custom_fields[$site_id]['entry_date'] = array('field_type' => 'date','field_name' => 'entry_date','site_id' => $site_id, 'field_label' => 'Entry Date', 'field_column' => 'entry_date',  'is_title_field' => 1);
 				$this->_custom_fields[$site_id]['expiration_date'] = array('field_type' => 'date','field_name' => 'expiration_date','site_id' => $site_id, 'field_label' => 'Expiration Date', 'field_column' => 'expiration_date',  'is_title_field' => 1);
+				$this->_custom_fields[$site_id]['status'] = array('field_type' => 'text','field_name' => 'status','site_id' => $site_id, 'field_label' => 'Status', 'field_column' => 'status',  'is_title_field' => 1 );
 			}
 			$this->EE->session->cache[$this->class_name]['custom_channel_fields'] = $this->_custom_fields;
 			return true;
