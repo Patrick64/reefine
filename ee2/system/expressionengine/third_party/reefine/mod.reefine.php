@@ -355,7 +355,7 @@ class Reefine {
 		foreach ($this->filter_groups as $group_name => &$group) {
 			if ($group->post_contains_filter_value() || $this->method=='post' || $this->method=='get' || $this->method=='ajax') {
 				$post_filter_values = $group->get_filter_value_from_post();
-				if (count($post_filter_values)>0) {
+				if ($post_filter_values !== null) {
 					$filter_values[$group_name] = $post_filter_values;
 				} else if ($group->default && !$this->is_ajax_request && !$this->is_form_post) {
 					// first hit of this form so set defaults
@@ -2416,7 +2416,7 @@ class Reefine_group {
 		} else if ($value!==false && $value!=='') {
 			return array($value);
 		} else {
-			return array();
+			return null;
 		}
 		
 	}
