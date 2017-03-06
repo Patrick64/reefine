@@ -127,6 +127,11 @@ class Reefine {
 	 */
 	var $entry_id = '';
 	/**
+	 * Author id array to search by only entries created by this author
+	 * @var string
+	 */
+	var $author_id = '';
+	/**
 	 * Restrict search results to entries with Start date after start_on only
 	 * @var unknown
 	 */
@@ -479,10 +484,16 @@ class Reefine {
 			$this->limit_by_category_ids($this->EE->TMPL->tagparams['category']);
 		}
 		
-		// category_url parameter limits results to just the the category_url
+		// entry_id parameter limits results to just the the entry ids
 		if (!empty($this->EE->TMPL->tagparams['entry_id'])) {
 			$this->limit_by_entry_ids($this->EE->TMPL->tagparams['entry_id']);
 		}
+		
+		// entry_id parameter limits results to just the the entry ids
+		if (!empty($this->EE->TMPL->tagparams['author_id'])) {
+			$this->limit_by_author_ids($this->EE->TMPL->tagparams['author_id']);
+		}
+		
 
 	}
 	
@@ -530,6 +541,15 @@ class Reefine {
 			$this->search_field_where_clause .= $sql;
 		}
 	}
+	
+	function limit_by_author_ids($author_id) {
+		if (preg_match_all('/\d+/',$author_id,$matches)) {
+			$author_ids = $matches[0];
+			$sql = ' (exp_channel_titles.author_id IN (' . implode(', ',$author_ids) . ')) ';
+			$this->search_field_where_clause .= $sql;
+		}
+	}
+	
 	
 	/**
 	 * get settings from tag parameters

@@ -146,6 +146,9 @@ url=&quot;mypage/{title}/{colour}&quot;</code></p>
   <li>method=&quot;get&quot; will allow for submitting the request via the GET method (so it appears in the URL eg http://www.example.com/products?colour=red ). You can use a form &lt;form method=&quot;get&quot; ...&gt; or by using <a href="#-list_groups-filters-url-">filter the url</a> links.</li>
   <li>method=&quot;post&quot; will allow for submitting the request via POST eg &lt;form methd=&quot;POST&quot; ... &gt;. Unless you have disabled secure forms you will need to add &lt;input type=&quot;hidden&quot; name=&quot;XID&quot; value=&quot;{XID_HASH}&quot; /&gt; to your form as well. This method does not support  <a href="#-list_groups-filters-url-">filter the url</a> links, you will need to use a form.</li>
 </ul>
+<h3 style="background-color: transparent; color: rgb(51, 51, 51); font-size: 16px; font-weight: bold; margin: 16px 0px 15px; padding: 0px;">author_id</h3>
+<p style="margin: 12px 20px 12px 0px;">Pipe separate list of author IDs. This parameter can restrict the entries shown to just these author IDs.</p>
+<p style="margin: 12px 20px 12px 0px;"><code>author_id=&quot;1|3&quot;</code></p>
 <h3>disable_search</h3>
 <p>Default: no</p>
 <p>You can add the parameter disable_search=&quot;yes&quot; which will make Reefine ignore any filter values in the URL or post. This is useful for showing all filter options on a subpage. For example if you are on the  product's page (http://www.example.com/products/items/red-trousers) you don't want Reefine to pick up the segments &quot;items/red-trousers&quot; so you add disable_search=&quot;yes&quot; to ignore them:</p>
