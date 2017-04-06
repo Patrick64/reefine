@@ -180,6 +180,16 @@ url=&quot;/products/{product_type}/{size}/{colour}/{price}/{title}&quot;}<br />
 <h3>category<em></em>_url</h3>
 <p>This parameter will limit all your entries to a particular category. This uses the category url title. </p>
 <p><code>category_url=&quot;{segment_2}&quot;</code></p>
+<p></p>
+<h3>fixed_order</h3>
+<p>Pipe separated lists of entry ids that will allow you specify the exact order of the entry_ids go in. You will need to put this in the fixed_order for {exp:channel:entries} for example:</p>
+<p><code>{exp:reefine <strong>fixed_order=&quot;1|2|3|4&quot;</strong> ...snip...} <br />
+  {entries}	 <br />
+  {exp:channel:entries entry_id=&quot;{entry_ids}&quot;<strong> fixed_order=&quot;{entry_ids}&quot;</strong> dynamic=&quot;no&quot; } ... snip ... {/exp:channel:entries} <br />
+  {/entries}  <br />
+  {/exp:reefine}</code></p>
+<h3></h3>
+<h3>&nbsp;</h3>
 <h3>show_expired</h3>
 <p>Default: no</p>
 <p>Show expired entries. You will also need to add this to your {exp:channel:entries} tag.</p>
@@ -241,7 +251,7 @@ filter:month:where_after=&quot;{current_time}&quot;<br />
   filter:genre:type=&quot;tree&quot;<br />
 </code></p>
 <h3>filter:<em>filter group</em>:fields</h3>
-<p>Pipe | seperated list of fields to filter by.</p>
+<p>Pipe | seperated list of fields to filter by. Also includes title, entry_date, expiration_date and status.</p>
 <p><code>filter:search:fields=&quot;title|product_type|colour&quot;</code></p>
 <p class="important"><strong>Important:</strong>&nbsp; If one of the fields is of type checkboxes or multiselect list you must specify <strong>filter:<em>filter group</em>:delimiter=&quot;|&quot;</strong></p>
 <p></p>
@@ -386,7 +396,7 @@ filter:month:where_after=&quot;{current_time}&quot;<br />
 <p></p>
 <p></p>
 <h2>{list_groups} &raquo; {filters} Variable Pair</h2>
-<p>This variable pair will contain your list of possible filter values for the filter group.</p>
+<p>This variable pair will contain your list of possible filter values for the filter group. The standard ExpressionEngine variables {count} and {total_results} are also available.</p>
 <h3></h3>
 <p></p>
 <h3>{list_groups} &raquo; {filters} &raquo; {filter_id}</h3>
@@ -506,6 +516,19 @@ value=&quot;{filter_title}&quot; title=&quot;Search ({filter_quantity})&quot; /&
 <h2>{filter_groups} Variable Pair</h2>
 <p>This variable pair will output all filters regardless of type. The variables available depend on what type the group is.</p>
 <h2>Change Log</h2>
+<h3>Version 2.1</h3>
+<p>Release 2017-04-06</p>
+<ul>
+  <li>Bug fixes</li>
+  <li>Added author_id, fixed_order parameters</li>
+  <li>Added status as filter field</li>
+</ul>
+<h3></h3>
+<h3>Version 2.0</h3>
+<p>Release 2016-10-20</p>
+<ul>
+  <li>Made EE3 compatible.</li>
+</ul>
 <h3>Version 1.6</h3>
 <p>Release 2015-09-28</p>
 <ul>
