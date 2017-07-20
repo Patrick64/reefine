@@ -184,7 +184,7 @@ class Reefine {
 	{
 		
 		// Make a local reference to the ExpressionEngine super object
-		$this->EE =& get_instance();
+		$this->EE = get_instance();
 		$this->EE->load->library('logger');
 		$this->timestamp = ($this->EE->TMPL->cache_timestamp != '') ? $this->EE->TMPL->cache_timestamp : $this->EE->localize->now;
 		
