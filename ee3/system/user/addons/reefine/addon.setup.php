@@ -5,6 +5,6 @@ return array(
   'author_url'  => 'http://ralphmedia.co.uk',
   'name'        => 'Reefine',
   'description' => 'Reefine from Ralph: Refine, sort, filter your entries',
-  'version'     => '2.1.0',
+  'version'     => '2.1.1',
   'namespace'   => 'Reefine'
 );
