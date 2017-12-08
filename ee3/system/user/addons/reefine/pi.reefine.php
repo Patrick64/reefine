@@ -193,7 +193,8 @@ class Reefine {
 			// if a second tag part is specified then stop processing
 			if (count($this->EE->TMPL->tagparts)>1)
 				return;
-
+			
+			$this->site = $this->EE->TMPL->fetch_param('site', $this->EE->config->item('site_id'));
 
 			// to fix annoying bug where EE puts exp_ in the wrong places.
 			$this->db = $this->EE->db;
@@ -421,7 +422,7 @@ class Reefine {
 
 		// get channel filter
 		$filter_channel = $this->EE->TMPL->fetch_param('channel', '');
-		$this->site = $this->EE->TMPL->fetch_param('site', $this->EE->config->item('site_id'));
+		
 		$this->status = $this->EE->TMPL->fetch_param('status', $this->EE->config->item('open'));
 		$this->disable_search = $this->EE->TMPL->fetch_param('disable_search', $this->EE->config->item('disable_search'));
 		// methods: url,post,get,ajax,
@@ -1277,6 +1278,7 @@ class Reefine {
 		$where = $this->EE->functions->sql_andor_string($channel_names, 'channel_name');
 		// remove the initial AND
 		$where = preg_replace('/^\s*AND\s*/', '', $where);
+		$where .= ' AND `site_id` = ' . intval($this->site);
 		$result = $this->db->select('channel_id')->from("{$this->dbprefix}channels")->where($where)->get()->result_array();
 		$channel_ids = array();
 		foreach ($result as $row)
@@ -1300,13 +1302,13 @@ class Reefine {
 			$this->_custom_fields = $this->EE->session->cache[$this->class_name]['custom_channel_fields'];
 			return true;
 		}
-
+		$this->_custom_fields = array($this->site => array());
 		// not found so cache them
 		$sql = "SELECT field_id, field_type, field_name, site_id, field_label, concat('field_id_',field_id) as field_column, 0 as is_title_field
-		FROM {$this->dbprefix}channel_fields ";
+		FROM {$this->dbprefix}channel_fields WHERE site_id = " . intval($this->site);
 
 		$query = $this->db->query($sql);
-
+		
 		if ($query->num_rows > 0)
 		{
 			foreach ($query->result_array() as $row)
@@ -1314,19 +1316,17 @@ class Reefine {
 				// assign standard custom fields
 				$this->_custom_fields[$row['site_id']][$row['field_name']] = $row;
 			}
-			foreach ($this->_custom_fields as $site_id => $field) {
-				$this->_custom_fields[$site_id]['title'] = array('field_type' => 'text','field_name' => 'title','site_id' => $site_id, 'field_label' => 'title', 'field_column' => 'title',  'is_title_field' => 1 );
-				$this->_custom_fields[$site_id]['entry_date'] = array('field_type' => 'date','field_name' => 'entry_date','site_id' => $site_id, 'field_label' => 'Entry Date', 'field_column' => 'entry_date',  'is_title_field' => 1);
-				$this->_custom_fields[$site_id]['expiration_date'] = array('field_type' => 'date','field_name' => 'expiration_date','site_id' => $site_id, 'field_label' => 'Expiration Date', 'field_column' => 'expiration_date',  'is_title_field' => 1);
-				$this->_custom_fields[$site_id]['status'] = array('field_type' => 'text','field_name' => 'status','site_id' => $site_id, 'field_label' => 'Status', 'field_column' => 'status',  'is_title_field' => 1 );
-			}
-			$this->EE->session->cache[$this->class_name]['custom_channel_fields'] = $this->_custom_fields;
-			return true;
 		}
-		else
-		{
-			return false;
+
+		foreach ($this->_custom_fields as $site_id => $field) {
+			$this->_custom_fields[$site_id]['title'] = array('field_type' => 'text','field_name' => 'title','site_id' => $site_id, 'field_label' => 'title', 'field_column' => 'title',  'is_title_field' => 1 );
+			$this->_custom_fields[$site_id]['entry_date'] = array('field_type' => 'date','field_name' => 'entry_date','site_id' => $site_id, 'field_label' => 'Entry Date', 'field_column' => 'entry_date',  'is_title_field' => 1);
+			$this->_custom_fields[$site_id]['expiration_date'] = array('field_type' => 'date','field_name' => 'expiration_date','site_id' => $site_id, 'field_label' => 'Expiration Date', 'field_column' => 'expiration_date',  'is_title_field' => 1);
+			$this->_custom_fields[$site_id]['status'] = array('field_type' => 'text','field_name' => 'status','site_id' => $site_id, 'field_label' => 'Status', 'field_column' => 'status',  'is_title_field' => 1 );
 		}
+		$this->EE->session->cache[$this->class_name]['custom_channel_fields'] = $this->_custom_fields;
+		return true;
+		
 	}
 
 	/**
