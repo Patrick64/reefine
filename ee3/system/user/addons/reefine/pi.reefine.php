@@ -282,19 +282,28 @@ class Reefine {
 	
 	private function parse_final_template($tagdata,$tag_array) {
 		// http://expressionengine.stackexchange.com/questions/1347/how-can-i-manually-parse-template-code-from-php
-		$html = '';
-		// back up existing TMPL class
-		$this->EE->load->library('template');
-		$OLD_TMPL = isset($this->EE->TMPL) ? $this->EE->TMPL : NULL;
-		if ($OLD_TMPL && $OLD_TMPL->parse_php == TRUE && $OLD_TMPL->php_parse_location == 'input' && $OLD_TMPL->cache_status != 'CURRENT')
+
+		// new version for ee3: https://expressionengine.com/forums/topic/248431/override-loader-objects
+		//check the ee()->TMPL object
+		if(isset(ee()->TMPL))
 		{
-			//$this->log_item("Parsing PHP on Input");
-			$tagdata = $this->EE->TMPL->parse_template_php($tagdata);
+			$OLD_TMPL = ee()->TMPL;
+			ee()->remove('TMPL');
 		}
-				
-			
-		$this->EE->TMPL = new EE_Template();
-		$html = $this->EE->TMPL->parse_variables_row($tagdata, $tag_array);
+		else
+		{
+			require_once APPPATH.'libraries/Template.php';
+			$OLD_TMPL = null;
+		}
+		$html = '';
+		
+		 //set the new ee()->TMPL
+		 ee()->set('TMPL', new EE_Template());
+		 $html = ee()->TMPL->parse_variables_row($tagdata, $tag_array);
+		 $html = ee()->TMPL->parse_globals($html);
+		 $html = ee()->TMPL->remove_ee_comments($html);
+
+
 		
 		// pretty lame that we need to manually load snippets
 		$result = $this->EE->db->select('snippet_name, snippet_contents')
@@ -311,20 +320,21 @@ class Reefine {
 		$this->EE->config->_global_vars = array_merge($this->EE->config->_global_vars, $snippets);
 		
 		// parse email contents as complete template
-		$this->EE->TMPL->parse($html);
+		ee()->TMPL->parse($html);
 		
 		
 		
-		$html = $this->EE->TMPL->parse_globals($this->EE->TMPL->final_template);
+		$html = ee()->TMPL->parse_globals(ee()->TMPL->final_template);
 		
-		if ($OLD_TMPL && $OLD_TMPL->parse_php == TRUE && $OLD_TMPL->php_parse_location == 'output' && $OLD_TMPL->cache_status != 'CURRENT')
+
+
+		//remove and add the old TMPL object to the ee()->TMPL object if null
+		if($OLD_TMPL !== NULL)
 		{
-			//$this->log_item("Parsing PHP on Output");
-			$html = $this->EE->TMPL->parse_template_php($html);
+			ee()->remove('TMPL');
+			ee()->set('TMPL', $OLD_TMPL);
 		}
-			
-		// restore old TMPL class
-		$this->EE->TMPL = $OLD_TMPL;
+	
 		
 		return $html;
 		
