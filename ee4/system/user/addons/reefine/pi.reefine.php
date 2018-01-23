@@ -1572,7 +1572,7 @@ require('groups/Reefine_group_number_range.php');
 
 require('groups/Reefine_group_date_range.php');
 
-require('groups/Reefine_group_search');
+require('groups/Reefine_group_search.php');
 
 require('groups/Reefine_group_tree.php');
 
