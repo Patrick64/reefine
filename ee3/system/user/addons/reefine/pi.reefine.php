@@ -236,12 +236,14 @@ class Reefine {
 			// get the list of possible values to be used
 			$this->set_filter_groups();
 
+			// get all entry ids for this search.
+			$this->entry_id_list = $this->get_entry_ids_from_database();
+
+
 			// get all possible urls for each filters and put in $this->filter_groups[]['filters']['url']
 			if ($this->method=='url' || $this->method=='ajax' || $this->method=='get') {
 				$this->add_filter_url_to_filters();
 			}
-			// get all entry ids for this search.
-			$this->entry_id_list = $this->get_entry_ids_from_database();
 			$this->theme->before_parse_tag_data();
 			
 			$tag_array = $this->get_tag_data_result($this->entry_id_list );
@@ -1137,10 +1139,11 @@ class Reefine {
 	 * @return mixed|multitype:
 	 */
 	public function urlencode_array($arr) {
-		foreach ($arr as &$value) {
-			$value = $this->urlencode($value);
+		$new_arr = array();
+		foreach ($arr as $value) {
+			$new_arr[] = $this->urlencode($value);
 		}
-		return $arr;
+		return $new_arr;
 	}
 	
 	
