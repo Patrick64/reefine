@@ -39,3 +39,20 @@
 !ee3/docs/*
 !ee3/docs/*/*
 
+!ee4/
+!ee4/themes/
+!ee4/themes/user
+!ee4/themes/user/reefine
+!ee4/themes/user/reefine/*
+!ee4/themes/user/reefine/*/*
+!ee4/themes/user/reefine/*/*/*
+!ee4/system/
+!ee4/system/user
+!ee4/system/user/addons
+!ee4/system/user/addons/reefine
+!ee4/system/user/addons/reefine/*
+!ee4/system/user/addons/reefine/*/*
+!ee4/system/user/addons/reefine/*/*/*
+!ee4/docs
+!ee4/docs/*
+!ee4/docs/*/*

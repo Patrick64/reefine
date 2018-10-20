@@ -193,7 +193,8 @@ class Reefine {
 			// if a second tag part is specified then stop processing
 			if (count($this->EE->TMPL->tagparts)>1)
 				return;
-
+			
+			$this->site = $this->EE->TMPL->fetch_param('site', $this->EE->config->item('site_id'));
 
 			// to fix annoying bug where EE puts exp_ in the wrong places.
 			$this->db = $this->EE->db;
@@ -235,12 +236,14 @@ class Reefine {
 			// get the list of possible values to be used
 			$this->set_filter_groups();
 
+			// get all entry ids for this search.
+			$this->entry_id_list = $this->get_entry_ids_from_database();
+
+
 			// get all possible urls for each filters and put in $this->filter_groups[]['filters']['url']
 			if ($this->method=='url' || $this->method=='ajax' || $this->method=='get') {
 				$this->add_filter_url_to_filters();
 			}
-			// get all entry ids for this search.
-			$this->entry_id_list = $this->get_entry_ids_from_database();
 			$this->theme->before_parse_tag_data();
 			
 			$tag_array = $this->get_tag_data_result($this->entry_id_list );
@@ -281,19 +284,28 @@ class Reefine {
 	
 	private function parse_final_template($tagdata,$tag_array) {
 		// http://expressionengine.stackexchange.com/questions/1347/how-can-i-manually-parse-template-code-from-php
-		$html = '';
-		// back up existing TMPL class
-		$this->EE->load->library('template');
-		$OLD_TMPL = isset($this->EE->TMPL) ? $this->EE->TMPL : NULL;
-		if ($OLD_TMPL && $OLD_TMPL->parse_php == TRUE && $OLD_TMPL->php_parse_location == 'input' && $OLD_TMPL->cache_status != 'CURRENT')
+
+		// new version for ee3: https://expressionengine.com/forums/topic/248431/override-loader-objects
+		//check the ee()->TMPL object
+		if(isset(ee()->TMPL))
 		{
-			//$this->log_item("Parsing PHP on Input");
-			$tagdata = $this->EE->TMPL->parse_template_php($tagdata);
+			$OLD_TMPL = ee()->TMPL;
+			ee()->remove('TMPL');
 		}
-				
-			
-		$this->EE->TMPL = new EE_Template();
-		$html = $this->EE->TMPL->parse_variables_row($tagdata, $tag_array);
+		else
+		{
+			require_once APPPATH.'libraries/Template.php';
+			$OLD_TMPL = null;
+		}
+		$html = '';
+		
+		 //set the new ee()->TMPL
+		 ee()->set('TMPL', new EE_Template());
+		 $html = ee()->TMPL->parse_variables_row($tagdata, $tag_array);
+		 $html = ee()->TMPL->parse_globals($html);
+		 $html = ee()->TMPL->remove_ee_comments($html);
+
+
 		
 		// pretty lame that we need to manually load snippets
 		$result = $this->EE->db->select('snippet_name, snippet_contents')
@@ -310,20 +322,21 @@ class Reefine {
 		$this->EE->config->_global_vars = array_merge($this->EE->config->_global_vars, $snippets);
 		
 		// parse email contents as complete template
-		$this->EE->TMPL->parse($html);
+		ee()->TMPL->parse($html);
 		
 		
 		
-		$html = $this->EE->TMPL->parse_globals($this->EE->TMPL->final_template);
+		$html = ee()->TMPL->parse_globals(ee()->TMPL->final_template);
 		
-		if ($OLD_TMPL && $OLD_TMPL->parse_php == TRUE && $OLD_TMPL->php_parse_location == 'output' && $OLD_TMPL->cache_status != 'CURRENT')
+
+
+		//remove and add the old TMPL object to the ee()->TMPL object if null
+		if($OLD_TMPL !== NULL)
 		{
-			//$this->log_item("Parsing PHP on Output");
-			$html = $this->EE->TMPL->parse_template_php($html);
+			ee()->remove('TMPL');
+			ee()->set('TMPL', $OLD_TMPL);
 		}
-			
-		// restore old TMPL class
-		$this->EE->TMPL = $OLD_TMPL;
+	
 		
 		return $html;
 		
@@ -421,7 +434,7 @@ class Reefine {
 
 		// get channel filter
 		$filter_channel = $this->EE->TMPL->fetch_param('channel', '');
-		$this->site = $this->EE->TMPL->fetch_param('site', $this->EE->config->item('site_id'));
+		
 		$this->status = $this->EE->TMPL->fetch_param('status', $this->EE->config->item('open'));
 		$this->disable_search = $this->EE->TMPL->fetch_param('disable_search', $this->EE->config->item('disable_search'));
 		// methods: url,post,get,ajax,
@@ -1126,10 +1139,11 @@ class Reefine {
 	 * @return mixed|multitype:
 	 */
 	public function urlencode_array($arr) {
-		foreach ($arr as &$value) {
-			$value = $this->urlencode($value);
+		$new_arr = array();
+		foreach ($arr as $value) {
+			$new_arr[] = $this->urlencode($value);
 		}
-		return $arr;
+		return $new_arr;
 	}
 	
 	
@@ -1277,6 +1291,7 @@ class Reefine {
 		$where = $this->EE->functions->sql_andor_string($channel_names, 'channel_name');
 		// remove the initial AND
 		$where = preg_replace('/^\s*AND\s*/', '', $where);
+		$where .= ' AND `site_id` = ' . intval($this->site);
 		$result = $this->db->select('channel_id')->from("{$this->dbprefix}channels")->where($where)->get()->result_array();
 		$channel_ids = array();
 		foreach ($result as $row)
@@ -1300,13 +1315,13 @@ class Reefine {
 			$this->_custom_fields = $this->EE->session->cache[$this->class_name]['custom_channel_fields'];
 			return true;
 		}
-
+		$this->_custom_fields = array($this->site => array());
 		// not found so cache them
 		$sql = "SELECT field_id, field_type, field_name, site_id, field_label, concat('field_id_',field_id) as field_column, 0 as is_title_field
-		FROM {$this->dbprefix}channel_fields ";
+		FROM {$this->dbprefix}channel_fields WHERE site_id = " . intval($this->site);
 
 		$query = $this->db->query($sql);
-
+		
 		if ($query->num_rows > 0)
 		{
 			foreach ($query->result_array() as $row)
@@ -1314,19 +1329,17 @@ class Reefine {
 				// assign standard custom fields
 				$this->_custom_fields[$row['site_id']][$row['field_name']] = $row;
 			}
-			foreach ($this->_custom_fields as $site_id => $field) {
-				$this->_custom_fields[$site_id]['title'] = array('field_type' => 'text','field_name' => 'title','site_id' => $site_id, 'field_label' => 'title', 'field_column' => 'title',  'is_title_field' => 1 );
-				$this->_custom_fields[$site_id]['entry_date'] = array('field_type' => 'date','field_name' => 'entry_date','site_id' => $site_id, 'field_label' => 'Entry Date', 'field_column' => 'entry_date',  'is_title_field' => 1);
-				$this->_custom_fields[$site_id]['expiration_date'] = array('field_type' => 'date','field_name' => 'expiration_date','site_id' => $site_id, 'field_label' => 'Expiration Date', 'field_column' => 'expiration_date',  'is_title_field' => 1);
-				$this->_custom_fields[$site_id]['status'] = array('field_type' => 'text','field_name' => 'status','site_id' => $site_id, 'field_label' => 'Status', 'field_column' => 'status',  'is_title_field' => 1 );
-			}
-			$this->EE->session->cache[$this->class_name]['custom_channel_fields'] = $this->_custom_fields;
-			return true;
 		}
-		else
-		{
-			return false;
+
+		foreach ($this->_custom_fields as $site_id => $field) {
+			$this->_custom_fields[$site_id]['title'] = array('field_type' => 'text','field_name' => 'title','site_id' => $site_id, 'field_label' => 'title', 'field_column' => 'title',  'is_title_field' => 1 );
+			$this->_custom_fields[$site_id]['entry_date'] = array('field_type' => 'date','field_name' => 'entry_date','site_id' => $site_id, 'field_label' => 'Entry Date', 'field_column' => 'entry_date',  'is_title_field' => 1);
+			$this->_custom_fields[$site_id]['expiration_date'] = array('field_type' => 'date','field_name' => 'expiration_date','site_id' => $site_id, 'field_label' => 'Expiration Date', 'field_column' => 'expiration_date',  'is_title_field' => 1);
+			$this->_custom_fields[$site_id]['status'] = array('field_type' => 'text','field_name' => 'status','site_id' => $site_id, 'field_label' => 'Status', 'field_column' => 'status',  'is_title_field' => 1 );
 		}
+		$this->EE->session->cache[$this->class_name]['custom_channel_fields'] = $this->_custom_fields;
+		return true;
+		
 	}
 
 	/**
