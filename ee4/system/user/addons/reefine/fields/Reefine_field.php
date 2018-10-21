@@ -53,9 +53,13 @@ class Reefine_field {
 		$this->reefine = $reefine;
 		$this->field_name = $field_name;
 		$dbprefix = $reefine->dbprefix;
-		$this->channel_data_alias = "{$dbprefix}channel_data";
+		
 		$this->channel_titles_alias = "{$dbprefix}channel_titles";
 		$this->assign_field_info($field_name);
+		if (isset($this->ee_field_info)) {
+			// $this->channel_data_alias = "{$dbprefix}channel_data";
+			$this->channel_data_alias = "{$dbprefix}channel_data_field_{$this->ee_field_info['field_id']}";
+		}
 	}
 	
 	// get bit of SQL for various columns in the filter:
@@ -69,8 +73,10 @@ class Reefine_field {
 			return $table  . '.' . $this->get_field_by_key($this->field_name,'field_column');
 		else if ($this->get_field_by_key($this->field_name,'is_title_field'))
 			return $this->channel_titles_alias  . '.' . $this->get_field_by_key($this->field_name,'field_column');
-		else
+		else {
 			return $this->channel_data_alias . '.' . $this->get_field_by_key($this->field_name,'field_column');
+		}
+			
 	}
 	
 	// normal fields don't an ID or need for extra columns
@@ -96,7 +102,12 @@ class Reefine_field {
 	}
 	
 	function get_join_sql() {
-		return '';
+		// return '';
+		if ($this->get_field_by_key($this->field_name,'is_title_field')) {
+			return '';
+		} else {
+			return " JOIN $this->channel_data_alias ON {$this->reefine->dbprefix}channel_titles.entry_id = $this->channel_data_alias.entry_id  ";
+		}
 	}
 	
 	function assign_field_info($ee_field_name) {

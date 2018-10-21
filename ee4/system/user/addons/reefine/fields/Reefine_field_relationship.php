@@ -51,7 +51,7 @@ class Reefine_field_relationship extends Reefine_field {
 	function get_join_sql() {
 		// join the main relationship table
 		$joins=array("LEFT OUTER JOIN {$this->reefine->dbprefix}relationships {$this->table_alias} " .
-		"ON {$this->table_alias}.parent_id = {$this->channel_data_alias}.entry_id " .
+		"ON {$this->table_alias}.parent_id = {$this->reefine->dbprefix}channel_titles.entry_id " .
 		"AND {$this->table_alias}.field_id = {$this->relation_field_id} ");
 
 

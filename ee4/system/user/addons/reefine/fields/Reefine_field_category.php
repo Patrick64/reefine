@@ -58,7 +58,7 @@ class Reefine_field_category extends Reefine_field {
 		
 		if (count($this->group_ids) > 0) {
 			$joins[] = "LEFT OUTER JOIN {$this->dbprefix}category_posts catp_{$this->group_name} " .
-			"ON catp_{$this->group_name}.entry_id = {$this->dbprefix}channel_data.entry_id \n" .
+			"ON catp_{$this->group_name}.entry_id = {$this->dbprefix}channel_titles.entry_id \n" .
 			"LEFT OUTER JOIN {$this->dbprefix}categories cat_{$this->group_name} " .
 			"ON cat_{$this->group_name}.cat_id = catp_{$this->group_name}.cat_id AND cat_{$this->group_name}.group_id IN {$this->cat_group_in_list} \n" ;
 		}
@@ -78,7 +78,7 @@ class Reefine_field_category extends Reefine_field {
 		if ($filter_group->join=='or' || $filter_group->join=='none') {
 			return " ( cat_{$this->group_name}.cat_url_title IN (" . implode(',',$in_list) . ") AND cat_{$this->group_name}.group_id IN {$this->cat_group_in_list})";
 		} else { // AND
-			return "{$this->dbprefix}channel_data.entry_id IN (SELECT exp_category_posts.entry_id " .
+			return "{$this->dbprefix}channel_titles.entry_id IN (SELECT exp_category_posts.entry_id " .
 					"FROM exp_category_posts " .
 					"JOIN exp_categories USING (cat_id) " .
 					"WHERE cat_url_title  = {$value} AND group_id IN {$this->cat_group_in_list} )";

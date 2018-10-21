@@ -534,12 +534,12 @@ class Reefine {
 			$logic_or = (strpos($category, '|')!==false);
 			
 			if ($logic_not) {
-				$sql = ' (exp_channel_data.entry_id NOT IN (SELECT entry_id FROM exp_category_posts WHERE cat_id IN (' . implode(', ',$categories) . '))) ';
+				$sql = ' (exp_channel_titles.entry_id NOT IN (SELECT entry_id FROM exp_category_posts WHERE cat_id IN (' . implode(', ',$categories) . '))) ';
 			} elseif ($logic_and) {
 				// @todo
 				throw new Exception('Sorry, AND operator not supported in Reefine',E_WARNING);
 			} else { // $logic_or
-				$sql = ' (exp_channel_data.entry_id IN (SELECT entry_id FROM exp_category_posts WHERE cat_id IN (' . implode(', ',$categories) . '))) ';
+				$sql = ' (exp_channel_titles.entry_id IN (SELECT entry_id FROM exp_category_posts WHERE cat_id IN (' . implode(', ',$categories) . '))) ';
 			}
 			$this->search_field_where_clause .= $sql;
 		}
@@ -548,7 +548,7 @@ class Reefine {
 	function limit_by_entry_ids($entry_id) {
 		if (preg_match_all('/\d+/',$entry_id,$matches)) {
 			$entry_ids = $matches[0];
-			$sql = ' (exp_channel_data.entry_id IN (' . implode(', ',$entry_ids) . ')) ';
+			$sql = ' (exp_channel_titles.entry_id IN (' . implode(', ',$entry_ids) . ')) ';
 			$this->search_field_where_clause .= $sql;
 		}
 	}
@@ -674,7 +674,7 @@ class Reefine {
 		// also left outer join categories if the category or category_url
 		if ($this->include_categories)
 			$joins[] = "LEFT OUTER JOIN {$this->dbprefix}category_posts global_catp " .
-			"ON global_catp.entry_id = {$this->dbprefix}channel_data.entry_id \n" .
+			"ON global_catp.entry_id = {$this->dbprefix}channel_titles.entry_id \n" .
 			"LEFT OUTER JOIN {$this->dbprefix}categories global_cat " .
 			"ON global_cat.cat_id = global_catp.cat_id " ;
 
@@ -693,10 +693,10 @@ class Reefine {
 	}
 
 	private function get_entry_ids_from_database() {
-		$sql = "SELECT DISTINCT({$this->dbprefix}channel_data.entry_id) " .
-		"FROM {$this->dbprefix}channel_data ";
+		$sql = "SELECT DISTINCT({$this->dbprefix}channel_titles.entry_id) " .
+		"FROM {$this->dbprefix}channel_titles ";
 		//if ($this->include_channel_titles)
-		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
+		// $sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
 		$sql .= $this->get_query_join_sql('',true);
 		$sql .= ' WHERE 1=1 ';
 
@@ -706,7 +706,7 @@ class Reefine {
 			$sql .= ' AND ' .$where;
 
 		if (isset($this->channel_ids)) {
-			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->channel_ids) . ")";
+			$sql .= " AND {$this->dbprefix}channel_titles.channel_id IN (" . implode(',',$this->channel_ids) . ")";
 		}
 		$results = $this->db->query($sql)->result_array();
 		return $results;
@@ -1315,7 +1315,7 @@ class Reefine {
 		$this->_custom_fields = array($this->site => array());
 		// not found so cache them
 		$sql = "SELECT field_id, field_type, field_name, site_id, field_label, concat('field_id_',field_id) as field_column, 0 as is_title_field
-		FROM {$this->dbprefix}channel_fields WHERE site_id = " . intval($this->site);
+		FROM {$this->dbprefix}channel_fields"; // WHERE site_id = " . intval($this->site);
 
 		$query = $this->db->query($sql);
 		
@@ -1324,7 +1324,7 @@ class Reefine {
 			foreach ($query->result_array() as $row)
 			{
 				// assign standard custom fields
-				$this->_custom_fields[$row['site_id']][$row['field_name']] = $row;
+				$this->_custom_fields[$this->site][$row['field_name']] = $row;
 			}
 		}
 
