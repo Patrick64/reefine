@@ -63,7 +63,10 @@ class Reefine_field_relationship extends Reefine_field {
 
 		// include channel_data only if we need fields from the related entry
 		if ($this->child_field_name!='' && $this->child_field_name!='title') {
-			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}channel_data {$this->table_alias_data} " .
+			$data_field_id = $this->get_field_by_key($this->child_field_name,'field_column');
+			$field = $this->get_field_by_name($this->child_field_name);
+			$data_field_id = $field['field_id'];
+			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}channel_data_field_{$data_field_id} {$this->table_alias_data} " .
 			"ON {$this->table_alias_data}.entry_id = {$this->table_alias_titles}.entry_id ";
 		}
 
