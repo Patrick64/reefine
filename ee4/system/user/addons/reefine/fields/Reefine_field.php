@@ -58,7 +58,9 @@ class Reefine_field {
 		$this->assign_field_info($field_name);
 		if (isset($this->ee_field_info)) {
 			// $this->channel_data_alias = "{$dbprefix}channel_data";
-			$this->channel_data_alias = "{$dbprefix}channel_data_field_{$this->ee_field_info['field_id']}";
+			if (isset($this->ee_field_info['field_id'])) {
+				$this->channel_data_alias = "{$dbprefix}channel_data_field_{$this->ee_field_info['field_id']}";
+			}
 		}
 	}
 	
