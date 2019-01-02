@@ -85,14 +85,14 @@ class Reefine_group_list extends Reefine_group {
 		($filter_column_id ? $filter_column_id : "''") . " as filter_id, " .
 		"{$title_column_name} as filter_title, {$this->get_filter_count_statement()} " . 
 		Reefine::column_implode($extra_columns) .
-		" FROM {$this->dbprefix}channel_data ";
+		" FROM {$this->dbprefix}channel_titles ";
 			
 		//if ($this->include_channel_titles)
-		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
+		// $sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
 		$sql .= $this->reefine->get_query_join_sql($this->group_name,false);
 		$sql .= " WHERE {$column_name} <> '' ";
 		if (isset($this->reefine->channel_ids)) {
-			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
+			$sql .= " AND {$this->dbprefix}channel_titles.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
 		}
 		if ($extra_clause!='')
 			$sql .= " AND ({$extra_clause}) ";

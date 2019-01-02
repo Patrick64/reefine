@@ -1314,7 +1314,9 @@ class Reefine {
 		}
 		$this->_custom_fields = array($this->site => array());
 		// not found so cache them
-		$sql = "SELECT field_id, field_type, field_name, site_id, field_label, concat('field_id_',field_id) as field_column, 0 as is_title_field
+		$sql = "SELECT field_id, field_type, field_name, site_id, field_label, 
+			concat('field_id_',field_id) as field_column, 0 as is_title_field,
+			case when legacy_field_data = 'y' then 1 else 0 end as is_legacy_field
 		FROM {$this->dbprefix}channel_fields"; // WHERE site_id = " . intval($this->site);
 
 		$query = $this->db->query($sql);
@@ -1329,10 +1331,10 @@ class Reefine {
 		}
 
 		foreach ($this->_custom_fields as $site_id => $field) {
-			$this->_custom_fields[$site_id]['title'] = array('field_type' => 'text','field_name' => 'title','site_id' => $site_id, 'field_label' => 'title', 'field_column' => 'title',  'is_title_field' => 1 );
-			$this->_custom_fields[$site_id]['entry_date'] = array('field_type' => 'date','field_name' => 'entry_date','site_id' => $site_id, 'field_label' => 'Entry Date', 'field_column' => 'entry_date',  'is_title_field' => 1);
-			$this->_custom_fields[$site_id]['expiration_date'] = array('field_type' => 'date','field_name' => 'expiration_date','site_id' => $site_id, 'field_label' => 'Expiration Date', 'field_column' => 'expiration_date',  'is_title_field' => 1);
-			$this->_custom_fields[$site_id]['status'] = array('field_type' => 'text','field_name' => 'status','site_id' => $site_id, 'field_label' => 'Status', 'field_column' => 'status',  'is_title_field' => 1 );
+			$this->_custom_fields[$site_id]['title'] = array('field_type' => 'text','field_name' => 'title','site_id' => $site_id, 'field_label' => 'title', 'field_column' => 'title',  'is_title_field' => 1 , 'is_legacy_field' => 0);
+			$this->_custom_fields[$site_id]['entry_date'] = array('field_type' => 'date','field_name' => 'entry_date','site_id' => $site_id, 'field_label' => 'Entry Date', 'field_column' => 'entry_date',  'is_title_field' => 1, 'is_legacy_field' => 0);
+			$this->_custom_fields[$site_id]['expiration_date'] = array('field_type' => 'date','field_name' => 'expiration_date','site_id' => $site_id, 'field_label' => 'Expiration Date', 'field_column' => 'expiration_date',  'is_title_field' => 1, 'is_legacy_field' => 0);
+			$this->_custom_fields[$site_id]['status'] = array('field_type' => 'text','field_name' => 'status','site_id' => $site_id, 'field_label' => 'Status', 'field_column' => 'status',  'is_title_field' => 1 , 'is_legacy_field' => 0);
 		}
 		$this->EE->session->cache[$this->class_name]['custom_channel_fields'] = $this->_custom_fields;
 		return true;
