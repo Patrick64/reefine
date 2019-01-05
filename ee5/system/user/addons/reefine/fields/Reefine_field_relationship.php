@@ -60,13 +60,21 @@ class Reefine_field_relationship extends Reefine_field {
 		$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}channel_titles {$this->table_alias_titles} " .
 		"ON {$this->table_alias_titles}.entry_id = {$this->table_alias}.child_id " .
 		"AND " . $this->reefine->get_status_where_clause($this->reefine->status,"{$this->table_alias_titles}.status");
-
+		
 		// include channel_data only if we need fields from the related entry
 		if ($this->child_field_name!='' && $this->child_field_name!='title') {
-			$data_field_id = $this->get_field_by_key($this->child_field_name,'field_column');
+			// $data_field_id = $this->get_field_by_key($this->child_field_name,'field_column');
+			
+			if ($this->ee_field_info['is_legacy_field']) {
+				// if its imported from EE2/3 then use old table
+				$data_table = "{$this->reefine->dbprefix}channel_data";
+			} else {
+				$data_table = "{$this->reefine->dbprefix}channel_data_field_{$data_field_id}";
+			}
+
 			$field = $this->get_field_by_name($this->child_field_name);
 			$data_field_id = $field['field_id'];
-			$joins[] = "LEFT OUTER JOIN {$this->reefine->dbprefix}channel_data_field_{$data_field_id} {$this->table_alias_data} " .
+			$joins[] = "LEFT OUTER JOIN {$data_table} {$this->table_alias_data} " .
 			"ON {$this->table_alias_data}.entry_id = {$this->table_alias_titles}.entry_id ";
 		}
 

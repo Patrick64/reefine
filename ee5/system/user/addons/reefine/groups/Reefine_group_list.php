@@ -61,9 +61,9 @@ class Reefine_group_list extends Reefine_group {
 			$count_where = $this->reefine->filter_where_clause;
 		
 		if ($count_where == '') {
-			return "{$this->dbprefix}channel_data.entry_id"; 
+			return "{$this->dbprefix}channel_titles.entry_id"; 
 		} else {
-			return "CASE WHEN {$count_where} THEN {$this->dbprefix}channel_data.entry_id ELSE NULL END as entry_id";
+			return "CASE WHEN {$count_where} THEN {$this->dbprefix}channel_titles.entry_id ELSE NULL END as entry_id";
 		}
 		
 		// @TODO: Move this to the WHERE clause
