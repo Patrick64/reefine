@@ -57,16 +57,16 @@ class Reefine_group_number_range extends Reefine_group {
 			$filter_max_sql = "GREATEST(" . implode(',',$filter_max_fields) . ")";
 		}
 
-		$sql = "SELECT count(distinct({$this->dbprefix}channel_data.entry_id)) as filter_quantity, " .
+		$sql = "SELECT count(distinct({$this->dbprefix}channel_titles.entry_id)) as filter_quantity, " .
 		"{$filter_min_sql} as filter_min, " .
 		"{$filter_max_sql} as filter_max " .
-		"FROM {$this->dbprefix}channel_data ";
+		"FROM {$this->dbprefix}channel_titles ";
 		//if ($this->include_channel_titles)
-		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
+		
 		$sql .= $this->reefine->get_query_join_sql($this->group_name,false);
 		$sql .= "WHERE 1=1 ";
 		if (isset($this->reefine->channel_ids)) {
-			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
+			$sql .= " AND {$this->dbprefix}channel_titles.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
 		}
 		// ignore the current filter group in creating the where clause
 		$where_clause_excluding_group = $this->reefine->get_filter_fields_where_clause($this->group_name);

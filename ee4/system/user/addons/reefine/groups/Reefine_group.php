@@ -177,7 +177,11 @@ class Reefine_group {
 	
 	static public function create_group_by_type($group_type,$group_name,$reefine) {
 		$class_name = 'Reefine_group_' . $group_type;
-		return new $class_name($reefine,$group_name);
+		if (class_exists($class_name)) {
+			return new $class_name($reefine,$group_name);
+		} else {
+			throw new Exception("Reefine error: filter:$group_name:type=\"$group_type\" is not valid as group type \"$group_type\" does not exist. Consult docs for available group types https://www.ralphmedia.co.uk/docs/reefine/#filter-filter-group-type ");
+		}
 	}
 	
 	public function get_settings_from_parameters($params) {

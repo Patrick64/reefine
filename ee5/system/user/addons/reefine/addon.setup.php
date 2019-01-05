@@ -5,6 +5,6 @@ return array(
   'author_url'  => 'http://patrickw.tech',
   'name'        => 'Reefine',
   'description' => 'Reefine: Refine, sort, filter your entries',
-  'version'     => '3.0.1',
+  'version'     => '3.1.0',
   'namespace'   => 'Reefine'
 );
