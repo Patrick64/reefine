@@ -79,6 +79,10 @@ class Reefine_group {
 	 */
 	public $default = '';
 	/**
+	 * Privte groups use the default value only and don't allow the user to change its filter value
+	 */
+	public $private = false;
+	/**
 	 * 
 	 * @var Reefine
 	 */
@@ -137,7 +141,8 @@ class Reefine_group {
 		$this->reefine->add_filter_group_setting($this, 'custom_titles', false, 'array');
 		$this->reefine->add_filter_group_setting($this, 'show_separate_only', false, 'bool');
 		$this->reefine->add_filter_group_setting($this, 'default', array(), 'array');
-			
+		$this->reefine->add_filter_group_setting($this, 'private', false, 'bool');
+
 		//if (count($this->category_group)>0) {
 			//$this->cat_group_in_list = $this->reefine->array_to_in_list($this->category_group);
 		//}
@@ -330,6 +335,7 @@ class Reefine_group {
 	 * @return multitype:string
 	 */
 	public function get_filter_querystring_from_filter_values($values) {
+		if ($this->private) return array(); // private groups dont add values to the url
 		$qs = array();
 		if (count($values)>0) {
 			foreach ($values as $v) {

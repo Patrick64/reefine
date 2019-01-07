@@ -359,7 +359,14 @@ class Reefine {
 				$this->url = preg_replace('/\/P(\d+)$/', '', $this->url);
 			}
 			$filter_values = $this->parse_search_url($this->url_tag,$this->url);
-		
+
+			// Check for any filter groups that aren't listed in the url= parameter and assign them with
+			// the group's default value
+			foreach ($this->filter_groups as $group_name => $group) {
+				if (!isset($filter_values[$group_name])) {
+					$filter_values[$group_name] = $group->default;
+				}
+			}
 		} 
 		if ($this->EE->input->get_post('ajax_request'))
 			$this->is_ajax_request=true;
@@ -472,9 +479,20 @@ class Reefine {
 		
 		// read search:xyz="" tag and create an sql where clause from it.
 		if (count($this->EE->TMPL->search_fields)>0) {
-			$this->search_field_where_clause = $this->get_search_field_where_clause($this->EE->TMPL->search_fields);
+			// $this->search_field_where_clause = $this->get_search_field_where_clause($this->EE->TMPL->search_fields);
+			foreach ($this->EE->TMPL->search_fields as $field_name => $terms)
+			{
+				if (isset($this->_custom_fields[$this->site][$field_name]['field_name'])) {
+					$group_name = '_search_param_' . $field_name;
+					$group = Reefine_group::create_group_by_type('search', $group_name, $this);
+					$group->fields = array($this->get_field_obj($field_name));
+					$group->default = array($terms);
+					$group->private = true;
+					$group->show_separate_only = true; // stop from showing up in the {filter_groups} tag
+					$this->filter_groups[$group_name] = $group;
+				}
+			}
 		}
-		
 		// get where cluses from filter groups
 		foreach ($this->filter_groups as $group) {
 			$group_where = $group->get_global_where_clause();
@@ -1250,7 +1268,7 @@ class Reefine {
 		// EE has bugs when a tag pair is used more than once so make a copy for the breadcrumb
 		if ($this->tagdataHasTag('filter_groups')) {
 			foreach ($this->filter_groups as $group_name => &$group) {
-				if (!$group->show_separate_only)
+				if (!$group->show_separate_only && !$group->private)
 					$tag['filter_groups'][] = $group->get_filters_for_output(false);
 			}
 		}
@@ -1264,12 +1282,12 @@ class Reefine {
 			
 			// add to group type tags, eg list_groups
 			$type_group_name = $group->type . '_groups';
-			if ($this->tagdataHasTag($type_group_name) && !$group->show_separate_only) {
+			if ($this->tagdataHasTag($type_group_name) && !$group->show_separate_only && !$group->private) {
 				$tag[$type_group_name][] = $group->get_filters_for_output(false);
 			}
 			
 			// make the {active_filters} tag
-			if ($this->tagdataHasTag('active_groups') && count($group->values)>0 && !$group->show_separate_only) {
+			if ($this->tagdataHasTag('active_groups') && count($group->values)>0 && !$group->show_separate_only && !$group->private) {
 				$tag['active_groups'][] = $group->get_filters_for_output(true);
 			}
 		}

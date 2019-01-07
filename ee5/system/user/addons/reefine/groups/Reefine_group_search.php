@@ -13,17 +13,23 @@ class Reefine_group_search extends Reefine_group {
 	 */
 	function set_filters() {
 		// search has just the one filter
+		
 		if (isset($this->values) && count($this->values)>0) {
+			$search_term = $this->values[0];
+		} else {
+			$search_term = $this->default ? $this->default[0] : '';
+		}
+		if ($search_term) {
 			$this->matching_filters = 1;
 			$this->active_filters = 1;
 			$this->filters = array(array(
-					'filter_value'=> $this->values[0],
-					'filter_title'=> $this->values[0],
+					'filter_value'=> $search_term,
+					'filter_title'=> $search_term,
 					'filter_id' => '',
 					'group_name' => $this->group_name,
 					'filter_quantity'=>1,
 					'filter_active'=>true));
-			
+		
 		} else {
 			$this->matching_filters = 0;
 			$this->active_filters = 0;
