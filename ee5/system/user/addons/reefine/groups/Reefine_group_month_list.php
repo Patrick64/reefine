@@ -20,6 +20,7 @@ class Reefine_group_month_list extends Reefine_group_list {
 	}
 	
 	public function get_global_where_clause() {
+		
 		/** @var $min_field Reefine_field */
 		$min_column = "cast({$this->fields[0]->get_value_column()} as UNSIGNED)";
 		// if two fields are specified then use a min-max range otherwise min-max are the same.
@@ -37,6 +38,20 @@ class Reefine_group_month_list extends Reefine_group_list {
 			return implode(' AND ',$sql);
 		else 
 			return '';
+		
+	}
+	
+	/**
+	 * To account for where_before and where_after parameters we need to join tables even if ther isn't a active filter
+	 */
+	public function get_global_join_sql() {
+		if ((!empty($this->where_before) && is_numeric($this->where_before)) ||
+		(!empty($this->where_after) && is_numeric($this->where_after))) {
+			return $this->get_join_sql();
+		} else {
+			return array();
+		}
+		
 		
 	}
 	
@@ -70,13 +85,14 @@ class Reefine_group_month_list extends Reefine_group_list {
 		$sql = "SELECT {$this->get_filter_count_statement()}, " .
 		"{$this->get_field_value_column($min_field)} as filter_min, " .
 		"{$this->get_field_value_column($max_field)} as filter_max " .
-		"FROM {$this->dbprefix}channel_data ";
+		"FROM {$this->dbprefix}channel_titles ";
 		//if ($this->include_channel_titles)
-		$sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
+		// $sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
 		$sql .= $this->reefine->get_query_join_sql($this->group_name,false);
 		$sql .= "WHERE 1=1 ";
+		
 		if (isset($this->reefine->channel_ids)) {
-			$sql .= " AND {$this->dbprefix}channel_data.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
+			$sql .= " AND {$this->dbprefix}channel_titles.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
 		}
 		// ignore the current filter group in creating the where clause
 		$where_clause_excluding_group = $this->reefine->get_filter_fields_where_clause($this->group_name);

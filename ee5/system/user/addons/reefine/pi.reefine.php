@@ -704,7 +704,10 @@ class Reefine {
 				//if ($is_category_join_required || $group->join=='or' || $group->join=='none' || $include_group==$key)
 				//	$joins = array_merge($joins,$group->get_category_join_sql());
 			}
+			
+			$joins = array_merge($joins,$group->get_global_join_sql());
 		}
+
 		// remove duplicates
 		$joins = array_map("unserialize", array_unique(array_map("serialize", $joins)));		
 		return implode("\n",$joins);

@@ -5,6 +5,7 @@ return array(
   'author_url'  => 'http://patrickw.tech',
   'name'        => 'Reefine',
   'description' => 'Reefine: Refine, sort, filter your entries',
-  'version'     => '3.1.1',
-  'namespace'   => 'Reefine'
+  'version'     => '3.1.2',
+  'namespace'   => 'Reefine',
+  'docs_url' => 'https://www.ralphmedia.co.uk/docs/reefine/'
 );

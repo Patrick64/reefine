@@ -174,6 +174,11 @@ class Reefine_group {
 		return '';
 	}
 	
+	public function get_global_join_sql() {
+		return array();
+	}
+	
+
 	public function add_filter_values($filter_values) {
 		if (isset($filter_values))
 			$this->values = array_merge($this->values, $filter_values);
