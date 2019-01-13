@@ -1069,7 +1069,7 @@ class Reefine {
 		if ($this->method=='url') {
 			return $this->get_filter_url_from_filter_values($filter_values);
 		} else {
-			return $this->get_filter_querystring_from_filter_values($filter_values);
+			return $this->get_filter_get_url_from_filter_values($filter_values);
 		}
 	}
 	
@@ -1104,22 +1104,27 @@ class Reefine {
 	 * @param unknown $filter_values
 	 * @return Ambigous <string, unknown>
 	 */
-	private function get_filter_querystring_from_filter_values($filter_values) {
-		$qs = array();
-		// for each tag in reefine's url="" parameter
-		foreach ($this->filter_groups as $group) {
-			if (isset($filter_values[$group->group_name])) $qs = array_merge($qs,$group->get_filter_querystring_from_filter_values($filter_values[$group->group_name]));
-		}
+	private function get_filter_get_url_from_filter_values($filter_values) {
+		$querystring = $this->get_filter_querystring_from_filter_values($filter_values);
 		$current_url = $this->EE->uri->uri_string();
 		// remove page number, we want to start at Page 1 each time.
 		$current_url = preg_replace('/\/P\d+\/?$/','/',$current_url);
-		$result = $current_url . '?' . implode($qs,'&');
+		$result = $current_url . '?' . $querystring;
 		// add a leading slash if one isn't provided
 		//if (strpos($result,'/')!==0 && strpos($result,'http://')!==0 && strpos($result,'https://')!==0) {
 		//	$result = '/' . $result;
 		//}
 	
 		return $result;
+	}
+	
+	private function get_filter_querystring_from_filter_values($filter_values) {
+		$qs = array();
+		// for each tag in reefine's url="" parameter
+		foreach ($this->filter_groups as $group) {
+			if (isset($filter_values[$group->group_name])) $qs = array_merge($qs,$group->get_filter_querystring_from_filter_values($filter_values[$group->group_name]));
+		}
+		return implode($qs,'&');
 	}
 	
 	
@@ -1234,6 +1239,7 @@ class Reefine {
 		$tag['tree_groups'] = array();
 		$tag['method'] = $this->method;
 		$tag['client_json'] = $this->get_client_json();
+		$tag['querystring'] = $this->get_filter_querystring_from_filter_values($this->filter_values);
 		$total_entries = count($results);
 		$entry_ids = '';
 
