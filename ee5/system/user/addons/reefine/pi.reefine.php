@@ -1130,23 +1130,41 @@ class Reefine {
 	
 		
 	
-	
+	/**
+	 * Replace all instances of characters that EE doesnt like in the URL (eg ,@$#) and replace with the character
+	 * number eg @ becomes --40--
+	 */
 	private function urlencode($value) {
 		// EE gives the error "The URI you submitted has disallowed characters." to a lot of special chars
 		// even if they're encoded so put an @ followed by the char HEX code to decode laters, eg when decoded ? will look like @3F
-		return strtr(urlencode($value), array(
-				'%3F' => '%403F', // ? 
-				'%40' => '%4040', // @
-				'%2F' => '%402F', // /
-				'%5C' => '%405C', // \
-				'%3E' => '%403E', // >
-				'%3C' => '%403C', // <
-				'%7B' => '%407B', // {
-				'%7D' => '%407D', // }
-				'%2B' => '%402B', // +
-				'%27' => '%4027', // '
-				'%2C' => '%402C' // '
-		));
+		// return strtr(urlencode($value), array(
+		// 		'%3F' => '--3F', // ? 
+		// 		'%40' => '--40', // @
+		// 		'%2F' => '--2F', // /
+		// 		'%5C' => '--5C', // \
+		// 		'%3E' => '--3E', // >
+		// 		'%3C' => '--3C', // <
+		// 		'%7B' => '--7B', // {
+		// 		'%7D' => '--7D', // }
+		// 		'%2B' => '--2B', // +
+		// 		'%27' => '--27', // '
+		// 		'%2C' => '--2C' // '
+		// ));
+		$result = "";
+		$value = preg_replace("/\-\-/","--45----45--",$value );
+		$chars = preg_split('//u', $value, null, PREG_SPLIT_NO_EMPTY);
+		// http://php.net/manual/en/function.mb-split.php
+		foreach ($chars as $char) {
+			// this if from ee5/system/ee/legacy/core/Input.php _clean_input_keys()
+			if ( ! preg_match("/^[a-z0-9:_ \-".EMOJI_REGEX."]+$/iu", $char)) {
+				$result .= "--" . ord($char) . "--";
+			}	else {
+				$result .= $char;
+			}
+		}
+		
+		return $result;
+		
 	}
 	
 	public function create_url($url)
@@ -1183,13 +1201,23 @@ class Reefine {
 			
 			// Do the reverse of _filter_uri() function in system/codeigniter/core/system/URI.php
 			// Convert entities back to programatic characters 
-			$bad	= array('$',		'(',		')',		'%28',		'%29');
-			$good	= array('&#36;',	'&#40;',	'&#41;',	'&#40;',	'&#41;');
-			//  go from good to bad.
-			$value = str_replace($good, $bad, $value);
+			// $bad	= array('$',		'(',		')',		'%28',		'%29');
+			// $good	= array('&#36;',	'&#40;',	'&#41;',	'&#40;',	'&#41;');
+			// //  go from good to bad.
+			// $value = str_replace($good, $bad, $value);
 				
-			
-			return urldecode(str_replace('@','%',str_replace('%40','%',$value)));
+			// return urldecode(preg_replace("/\-\-([0-9]+)\-\-/",'%$1',$value));
+			// preg_split("")
+			$result = preg_replace_callback(
+				"/\-\-([0-9]+)\-\-/",
+				function ($matches) {
+					// $char = preg_replace("-","",$matches[0]);
+					return chr($matches[1]);
+				},
+				$value
+			);
+			return $result;
+			// return urldecode(preg_replace("/\-\-([0-9a-fA-F]{2})/",'%$1',$value));
 		}
 	}
 
