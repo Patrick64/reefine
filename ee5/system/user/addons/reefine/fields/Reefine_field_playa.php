@@ -50,7 +50,7 @@ function get_title_column() {
 function get_join_sql() {
     // join the main relationship table
     $joins=array("LEFT OUTER JOIN {$this->reefine->dbprefix}playa_relationships {$this->table_alias} " .
-    "ON {$this->table_alias}.parent_entry_id = {$this->channel_data_alias}.entry_id " .
+    "ON {$this->table_alias}.parent_entry_id = {$this->channel_titles_alias}.entry_id " .
     "AND {$this->table_alias}.parent_field_id = {$this->relation_field_id} ");
     
     // check for entry status as well
