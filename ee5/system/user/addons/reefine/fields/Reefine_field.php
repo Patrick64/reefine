@@ -111,7 +111,7 @@ class Reefine_field {
 		// } else if ($this->get_field_by_key($this->field_name,'is_legacy_field')) {
 		// 	return " JOIN $this->channel_data_alias ON {$this->reefine->dbprefix}channel_titles.entry_id = $this->channel_data_alias.entry_id  ";
 		} else {
-			return " JOIN $this->channel_data_alias ON {$this->reefine->dbprefix}channel_titles.entry_id = $this->channel_data_alias.entry_id  ";
+			return " LEFT OUTER JOIN $this->channel_data_alias ON {$this->reefine->dbprefix}channel_titles.entry_id = $this->channel_data_alias.entry_id  ";
 		}
 	}
 	
