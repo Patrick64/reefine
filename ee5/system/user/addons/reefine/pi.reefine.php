@@ -141,7 +141,10 @@ class Reefine {
 	 * @var unknown
 	 */
 	var $fixed_order = '';
-	
+	/**
+	 * If a filter group has no filters should it be prevented from being output?
+	 */
+	var $show_empty_filter_groups = false;
 	/**
 	 * @var array default settings for group if not otherwise specified
 	 */
@@ -451,6 +454,8 @@ class Reefine {
 		$this->fix_pagination = ($this->EE->TMPL->fetch_param('fix_pagination') == 'yes' ? true : false);
 		$this->start_on = $this->EE->TMPL->fetch_param('start_on', '');
 		$this->fixed_order = $this->EE->TMPL->fetch_param('fixed_order', '');
+		$this->show_empty_filter_groups = ($this->EE->TMPL->fetch_param('show_empty_filter_groups', '') == 'no' ? false : true);
+		
 		
 		// get list of channel ids to choose from
 		if (!empty($filter_channel)) {
@@ -1306,22 +1311,38 @@ class Reefine {
 		// EE has bugs when a tag pair is used more than once so make a copy for the breadcrumb
 		if ($this->tagdataHasTag('filter_groups')) {
 			foreach ($this->filter_groups as $group_name => &$group) {
-				if (!$group->show_separate_only && !$group->private)
-					$tag['filter_groups'][] = $group->get_filters_for_output(false);
+				if (!$group->show_separate_only && !$group->private) {
+					$group_tags = $group->get_filters_for_output(false);
+					// add to {filter_groups} pair if there is one or more filter
+					if (count($group_tags['filters'])>0  || $this->show_empty_filter_groups) {
+						$tag['filter_groups'][] = $group_tags;
+					}
+				}
+					
 			}
 		}
 
 		foreach ($this->filter_groups as $group_name => &$group) {
 			// go through each filter group to see if a seperate filter is specified			
-			if ($this->tagdataHasTag($group_name)) 
-				$tag[$group_name] = array($group->get_filters_for_output(false));
+			if ($this->tagdataHasTag($group_name)) {
+				$group_tags = $group->get_filters_for_output(false);
+				// if the group will show filters then output the tag otherwise just output blank
+				if (count($group_tags['filters']) > 0 || $this->show_empty_filter_groups) {
+					$tag[$group_name] = array($group_tags);
+				} else {
+					$tag[$group_name] = array();
+				}
+			}
 			// make the type group tag tag if it is specified (eg number_range_groups)
 			
 			
 			// add to group type tags, eg list_groups
 			$type_group_name = $group->type . '_groups';
 			if ($this->tagdataHasTag($type_group_name) && !$group->show_separate_only && !$group->private) {
-				$tag[$type_group_name][] = $group->get_filters_for_output(false);
+				$group_tags = $group->get_filters_for_output(false);
+				if (count($group_tags['filters'])>0  || $this->show_empty_filter_groups) {
+					$tag[$type_group_name][] = $group_tags;
+				}
 			}
 			
 			// make the {active_filters} tag
