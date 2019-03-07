@@ -88,7 +88,7 @@ class Reefine_group_month_list extends Reefine_group_list {
 		"FROM {$this->dbprefix}channel_titles ";
 		//if ($this->include_channel_titles)
 		// $sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id={$this->dbprefix}channel_data.entry_id ";
-		$sql .= $this->reefine->get_query_join_sql($this->group_name,false);
+		$sql .= $this->reefine->get_query_join_sql($this->group_name);
 		$sql .= "WHERE 1=1 ";
 		
 		if (isset($this->reefine->channel_ids)) {
@@ -146,7 +146,7 @@ class Reefine_group_month_list extends Reefine_group_list {
 	}
 	
 	// construct the where clause for a group of type "list"
-	public function get_where_clause() {
+	public function get_group_where_clause($exclude_categories = false)  {
 		$clauses = array();
 
 		// a filter group can have many fields so go through each

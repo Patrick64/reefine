@@ -472,7 +472,10 @@ class Reefine {
 			if (preg_match('/filter\:(.+)\:.+/',$key,$matches)) {
 				$group_name = $matches[1];
 				if (!isset($this->filter_groups[$group_name])) {
-					$group_type = $this->get_filter_group_setting($group_name, 'type', 'list');
+					// @todo split into its function
+					$category_group = $this->get_filter_group_setting($group_name, 'category_group', '');
+					$default_group_type = $category_group == '' ? 'list' : 'tree';
+					$group_type = $this->get_filter_group_setting($group_name, 'type', $default_group_type );
 					$group = Reefine_group::create_group_by_type($group_type, $group_name, $this);
 					$this->filter_groups[$group_name] = $group;
 				}
@@ -691,7 +694,7 @@ class Reefine {
 	 * @param bool $is_category_join_required Is category join required (eg for the entries search where it may required if the category id is in the where clause)
 	 * @return string
 	 */
-	public function get_query_join_sql($include_group,$is_category_join_required) {
+	public function get_query_join_sql($include_group,$is_category_join_required = true) {
 		$joins = array();
 		
 		// also left outer join categories if the category or category_url
@@ -705,9 +708,12 @@ class Reefine {
 		foreach ($this->filter_groups as $key => $group) {
 			// If group has values
 			if ($key==$include_group || (isset($group->values) && count($group->values)>0)) {
-				$joins = array_merge($joins,$group->get_join_sql());
-				//if ($is_category_join_required || $group->join=='or' || $group->join=='none' || $include_group==$key)
-				//	$joins = array_merge($joins,$group->get_category_join_sql());
+				// add join if this group is a category group or category join is required anyway
+				if ($is_category_join_required || (!is_a($group,'Reefine_group_category'))) {
+					$joins = array_merge($joins,$group->get_join_sql());
+					//if ($is_category_join_required || $group->join=='or' || $group->join=='none' || $include_group==$key)
+					//	$joins = array_merge($joins,$group->get_category_join_sql());
+				}
 			}
 			
 			$joins = array_merge($joins,$group->get_global_join_sql());
@@ -746,13 +752,13 @@ class Reefine {
 	 * @param string $ignore_filter_group Filter group key to ignore, useful for fields that aren't exclusive
 	 * @return string SQL where clause to be used for selecting channel entries or the getting counts for filters
 	 */
-	function get_filter_fields_where_clause($ignore_filter_group = '') {
+	function get_filter_fields_where_clause($ignore_filter_group = '', $exclude_categories = false) {
 		$clauses = array();
 		//// make where statement based on filter fields
 		foreach ($this->filter_groups as $key => $group) {
 			// If the field has some selected values and it's not one to ignore..
 			if ($ignore_filter_group!=$key && isset($group->values) && count($group->values)>0) {
-				$clauses = array_merge($clauses,$group->get_where_clause());
+				$clauses = array_merge($clauses,$group->get_group_where_clause($exclude_categories));
 			}
 		}
 
@@ -1652,6 +1658,8 @@ require('groups/Reefine_group_number_range.php');
 require('groups/Reefine_group_date_range.php');
 
 require('groups/Reefine_group_search.php');
+
+require('groups/Reefine_group_category.php');
 
 require('groups/Reefine_group_tree.php');
 

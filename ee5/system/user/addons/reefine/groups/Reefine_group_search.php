@@ -62,7 +62,7 @@ class Reefine_group_search extends Reefine_group {
 	}
 	
 	//
-	public function get_where_clause() {
+	public function get_group_where_clause($exclude_categories = false) {
 		$clauses = array();
 		if (isset($this->fields) && count($this->values)>0) {
 			$search_terms = array();

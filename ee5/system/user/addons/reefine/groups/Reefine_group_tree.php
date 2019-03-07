@@ -1,6 +1,5 @@
 <?php
-
-class Reefine_group_tree extends Reefine_group_list {
+class Reefine_group_tree extends Reefine_group_category {
 	public $type = 'tree';
 	function __construct($reefine,$group_name) {
 		parent::__construct($reefine,$group_name);

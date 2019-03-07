@@ -89,7 +89,7 @@ class Reefine_group_list extends Reefine_group {
 			
 		//if ($this->include_channel_titles)
 		// $sql .= "JOIN {$this->dbprefix}channel_titles ON {$this->dbprefix}channel_titles.entry_id = {$this->dbprefix}channel_data.entry_id ";
-		$sql .= $this->reefine->get_query_join_sql($this->group_name,false);
+		$sql .= $this->reefine->get_query_join_sql($this->group_name);
 		$sql .= " WHERE {$column_name} <> '' ";
 		if (isset($this->reefine->channel_ids)) {
 			$sql .= " AND {$this->dbprefix}channel_titles.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
@@ -130,7 +130,7 @@ class Reefine_group_list extends Reefine_group {
 	}
 	
 	// construct the where clause for a group of type "list"
-	public function get_where_clause() {
+	public function get_group_where_clause($exclude_categories = false) {
 		$clauses = array();
 		if (!isset($this->category_group))
 			$this->category_group=array();

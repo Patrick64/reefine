@@ -604,7 +604,7 @@ class Reefine_group {
 		// abstract	
 	}
 	
-	public function get_where_clause() {
+	public function get_group_where_clause($exclude_categories = false)  {
 		//abstract
 		return array();
 	}
