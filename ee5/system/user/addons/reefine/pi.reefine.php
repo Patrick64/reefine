@@ -474,7 +474,7 @@ class Reefine {
 				if (!isset($this->filter_groups[$group_name])) {
 					// @todo split into its function
 					$category_group = $this->get_filter_group_setting($group_name, 'category_group', '');
-					$default_group_type = $category_group == '' ? 'list' : 'tree';
+					$default_group_type = $category_group == '' ? 'list' : 'category';
 					$group_type = $this->get_filter_group_setting($group_name, 'type', $default_group_type );
 					$group = Reefine_group::create_group_by_type($group_type, $group_name, $this);
 					$this->filter_groups[$group_name] = $group;
