@@ -168,6 +168,7 @@ class Reefine_group_category extends Reefine_group_list {
 		
 			$sql = " INNER JOIN exp_category_posts {$table_alias} ON {$entry_id_column} = {$table_alias}.entry_id "; 
 			if (count($or_statements)>0) $sql .= " AND ( " . implode (' OR ', $or_statements) . " )"; 
+			return $sql;
 		}
 	}
 	

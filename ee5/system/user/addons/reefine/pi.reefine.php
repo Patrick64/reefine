@@ -709,11 +709,11 @@ class Reefine {
 			// If group has values
 			if ($key==$include_group || (isset($group->values) && count($group->values)>0)) {
 				// add join if this group is a category group or category join is required anyway
-				if ($is_category_join_required || (!is_a($group,'Reefine_group_category'))) {
+				//if ($is_category_join_required || (!is_a($group,'Reefine_group_category'))) {
 					$joins = array_merge($joins,$group->get_join_sql());
 					//if ($is_category_join_required || $group->join=='or' || $group->join=='none' || $include_group==$key)
 					//	$joins = array_merge($joins,$group->get_category_join_sql());
-				}
+				//}
 			}
 			
 			$joins = array_merge($joins,$group->get_global_join_sql());
