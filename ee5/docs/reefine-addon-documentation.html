@@ -11,7 +11,7 @@
 <meta http-equiv='expires' content='-1' />
 <meta http-equiv= 'pragma' content='no-cache' />
 <meta name='robots' content='all' />
-<link rel="canonical" href="http://www.ralphmedia.co.uk/docs/reefine/" />
+
 </head>
 <body>
 
@@ -32,7 +32,7 @@
 <!-- START BREADCRUMB -->
 <table cellpadding="0" cellspacing="0" border="0" style="width:100%">
 <tr>
-<td id="breadcrumb"><a href="http://www.ralphmedia.co.uk">Ralph</a>&nbsp;&#8250;&nbsp;
+<td id="breadcrumb"><a href="http://patrickw.tech">Patrick W</a>&nbsp;&#8250;&nbsp;
 <a href="#">Add-ons</a> &nbsp;&#8250;&nbsp; Reefine
 </td>
 <td id="searchbox"><form method="get" action="http://www.google.com/search"></form></td>
@@ -51,14 +51,14 @@
 <div id="content">
 
 
-<h1>Reefine v2.0</h1>
+<h1>Reefine - ExpressionEngine addon</h1>
 
-<p>Reefine is an ExpressionEngine 2 &amp; 3 add-on that allows the user to search, filter and refine channel entries (eg products) on your site. It is aimed at ecommerce sites but can be used for sorting any kind of data stored in channel entries.</p>
+<p>Reefine is an ExpressionEngine add-on that allows the user to search, filter and refine channel entries (eg products) on your site. It is aimed at ecommerce sites but can be used for sorting any kind of data stored in channel entries.</p>
 <ul>
   <li><a href="http://devot-ee.com/add-ons/reefine">Buy Reefine on Devot:ee</a></li>
   <li><a href="http://www.ralphmedia.co.uk/reefine/demo_basic">View live demo of Reefine</a></li>
   <li><a href="http://www.ralphmedia.co.uk/our_work/reefine-expressionengine-add-on">Reefine homepage</a></li>
-  <li><a href="http://www.ralphmedia.co.uk/">About Ralph</a></li>
+  <li><a href="http://patrickw.tech/">About the developer</a></li>
 </ul>
 <h2>Documentation Versions</h2>
 <ul>
@@ -70,7 +70,7 @@
   <li><a href="http://expressionengine.com/" target="_blank">ExpressionEngine</a> 2.4.0 or later</li>
   <li>PHP 5</li>
   </ul>
-<p>First download and extract the Reefine ZIP file. There are two folders, ee2 and ee3. </p>
+<p>First download and extract the Reefine ZIP file. There are folders, ee2, ee3, ee4 and ee5. </p>
 <h3>Install Reefine 1.x (ExpressionEngine 2)</h3>
 <ol>
   <li>Download and extract the ee2 folder in the Reefine ZIP file.</li>
@@ -79,11 +79,11 @@
   <li>Install the module in Add-Ons → Modules</li>
   <li>Check the ee2/docs folder for more instructions on Reefine 1.x</li>
   </ol>
-<h3>Install Reefine 2.x (ExpressionEngine 3)</h3>
+<h3>Install Reefine 2.x or 3.x (ExpressionEngine 3, 4 & 5)</h3>
 <ol>
-  <li>Download and extract the Reefine ZIP file.</li>
-  <li>Upload the /ee3/system/user/addons/reefine folder to /system/user/addons/reefine</li>
-  <li>Upload the /ee3/themes/user/reefine folder to /themes/user/reefine</li>
+  <li>Download and extract the Reefine ZIP file. Go into the ee3/ee4/ee5 folder depending on your ExpressionEngine version</li>
+  <li>Upload the /system/user/addons/reefine folder to /system/user/addons/reefine</li>
+  <li>Upload the /themes/user/reefine folder to /themes/user/reefine</li>
   <li>Click Developer → Add-on Manager. Scroll down to &quot;Third Party Add-Ons&quot; and click install next to Reefine.</li>
 </ol>
 <h2>Hello world</h2>
@@ -332,6 +332,17 @@ filter:month:where_after=&quot;{current_time}&quot;<br />
 <p><code>{if total_entries == 0} No entries found. {/if}</code></p>
 <p></p>
 <p></p>
+<h3>{querystring}</h3>
+<p>Query string of current search, useful for pagination if you're using <a href="#method">method="get"</a> as ExpressionEngine does not add the querystring onto {auto_path} in pagination.</p>
+<code>
+{paginate}
+<br>{if next_page}
+<br>&nbsp;&nbsp;&nbsp;&lt;a href="{auto_path}?{querystring}"&gt;Next page&lt;/a&gt;
+<br>{/if}
+<br>{/paginate}
+</code>
+
+
 <h2>{entries} Variable Pair</h2>
 <p>Where the magic happens. This variable pair will contain your channel entries code to display the results</p>
 <h3>{entries} &raquo; {entry_ids}</h3>
@@ -516,6 +527,28 @@ value=&quot;{filter_title}&quot; title=&quot;Search ({filter_quantity})&quot; /&
 <h2>{filter_groups} Variable Pair</h2>
 <p>This variable pair will output all filters regardless of type. The variables available depend on what type the group is.</p>
 <h2>Change Log</h2>
+<h3>Version 3.2.0</h3>
+<p>Release 2019-04-01</p>
+<ul><li>Added {querystring} tag</li>
+<li>Big change to url encoding: Now uses --number-- encoding to fix disallowed character bug eg test@example becomes test--45--example</li>
+<li>Improved category filter Performance</li>
+<li>Bug fixes</li>
+</ul>
+<h3>Version 3.1.1</h3>
+<p>Released 2019-01-07</p>
+<ul>
+  <li>Bug fixes</li>
+  <li>EE5 compatible</li>
+</ul>
+<h3>Version 3.0.0</h3>
+<p>Release 3018-10-26</p>
+<ul><li>EE4 compatible</li></ul>
+<h3>Version 2.1.2</h3>
+<p>Released 2018-01-16</p>
+<ul>
+<li>fixed bug with site id not in where clauses</li>
+<li>EE3: added fix for ajax loading template override error</li>
+</ul>
 <h3>Version 2.1</h3>
 <p>Release 2017-04-06</p>
 <ul>
@@ -523,7 +556,6 @@ value=&quot;{filter_title}&quot; title=&quot;Search ({filter_quantity})&quot; /&
   <li>Added author_id, fixed_order parameters</li>
   <li>Added status as filter field</li>
 </ul>
-<h3></h3>
 <h3>Version 2.0</h3>
 <p>Release 2016-10-20</p>
 <ul>
@@ -627,27 +659,25 @@ url=&quot;/store/{size}/{price}&quot;<br />
 <h2>About Reefine</h2>
 <h3>License</h3>
 <p>A purchased license is required for each installation of the software. One (1) license grants the right to perform one (1) installation. Each additional installation of this software requires an additional purchased license.</p>
-<p><a href="http://devot-ee.com/add-ons/license/reefine">Read full license</a></p>
+<p><a href="../license.txt">Read full license</a></p>
 <h3>Support</h3>
 <p>Support is available by email or the Devotee forum. We do not provide any guarantees on support but we will do our best if you are having problems.  </p>
 <ul>
-    <li><script type="text/javascript">
-//<![CDATA[
-<!--
-var x="function f(x){var i,o=\"\",ol=x.length,l=ol;while(x.charCodeAt(l/13)!" +
-"=48){try{x+=x;l+=l;}catch(e){}}for(i=l-1;i>=0;i--){o+=x.charAt(i);}return o" +
-".substr(0,ol);}f(\")03,\\\"u}wbhw)hz$-''410\\\\`WNQ]i230\\\\UQV[pn\\\\120\\" +
-"\\n320\\\\l220\\\\KAXB^t\\\\n\\\\{RWKSRTS?prx771\\\\{9}y771\\\\rzV|~y|}h~{r" +
-"L(bhlbfgS=n\\\\630\\\\130\\\\120\\\\030\\\\410\\\\310\\\\H530\\\\000\\\\Z43" +
-"0\\\\120\\\\_120\\\\600\\\\n\\\\010\\\\100\\\\300\\\\230\\\\500\\\\t\\\\520" +
-"\\\\&610\\\\700\\\\n\\\\020\\\\520\\\\100\\\\/d2(738:w710\\\\l)(9!g$771\\\\" +
-"c720\\\\SW\\\\\\\\C\\\\\\\\AF100\\\\YELJP@N{\\\"(f};o nruter};))++y(^)i(tAe" +
-"doCrahc.x(edoCrahCmorf.gnirtS=+o;721=%y;++y)03<i(fi{)++i;l<i;0=i(rof;htgnel" +
-".x=l,\\\"\\\"=o,i rav{)y,x(f noitcnuf\")"                                    ;
-while(x=eval(x));
-//-->
-//]]>
-</script></li>
+    <li>
+      <script type="text/javascript">
+        var x="function f(x){var i,o=\"\",ol=x.length,l=ol;while(x.charCodeAt(l/13)!" +
+        "=92){try{x+=x;l+=l;}catch(e){}}for(i=l-1;i>=0;i--){o+=x.charAt(i);}return o" +
+        ".substr(0,ol);}f(\")93,\\\"310\\\\730\\\\520\\\\400\\\\610\\\\520\\\\K600\\" +
+        "\\420\\\\OE@Pr\\\\UJCvli}kZjvxrqu-0M2S3h`771\\\\c}(%Zmgfv/w520\\\\630\\\\52" +
+        "0\\\\t\\\\610\\\\030\\\\010\\\\7500\\\\330\\\\330\\\\620\\\\420\\\\710\\\\V" +
+        "500\\\\430\\\\n\\\\r\\\\300\\\\r\\\\|000\\\\g>3&:p/ph`(('4WNM620\\\\BZW][OE" +
+        "L\\\"(f};o nruter};))++y(^)i(tAedoCrahc.x(edoCrahCmorf.gnirtS=+o;721=%y;++y" +
+        ")93<i(fi{)++i;l<i;0=i(rof;htgnel.x=l,\\\"\\\"=o,i rav{)y,x(f noitcnuf\")"    ;
+        while(x=eval(x));
+        </script>
+        
+          <noscript>Enable javascript to see email</noscript>
+      </li>
     <li><a href="http://devot-ee.com/add-ons/support/reefine/viewforum/2198">Devot:ee forum</a></li>
 </ul>
 <h2>Tips and Tricks</h2>
