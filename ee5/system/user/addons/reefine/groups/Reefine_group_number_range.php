@@ -189,7 +189,7 @@ class Reefine_group_number_range extends Reefine_group {
 	}
 
 
-	public function get_where_clause() {
+	public function get_group_where_clause($exclude_categories = false) {
 		$min_clauses = array();
 		$max_clauses = array();
 		$clauses = array();
