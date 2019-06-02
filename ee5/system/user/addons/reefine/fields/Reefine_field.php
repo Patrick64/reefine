@@ -58,7 +58,7 @@ class Reefine_field {
 		$this->assign_field_info($field_name);
 		if (isset($this->ee_field_info)) {
 			if ($this->ee_field_info['is_legacy_field']) {
-				$this->channel_data_alias = "{$dbprefix}channel_data";
+				$this->channel_data_alias = "legacy_channel_data_{$this->ee_field_info['field_id']}";
 			} else if (isset($this->ee_field_info['field_id'])) {
 				$this->channel_data_alias = "{$dbprefix}channel_data_field_{$this->ee_field_info['field_id']}";
 			}
@@ -111,7 +111,11 @@ class Reefine_field {
 		// } else if ($this->get_field_by_key($this->field_name,'is_legacy_field')) {
 		// 	return " JOIN $this->channel_data_alias ON {$this->reefine->dbprefix}channel_titles.entry_id = $this->channel_data_alias.entry_id  ";
 		} else {
-			return " LEFT OUTER JOIN $this->channel_data_alias ON {$this->reefine->dbprefix}channel_titles.entry_id = $this->channel_data_alias.entry_id  ";
+			if ($this->ee_field_info['is_legacy_field']) {
+				return " LEFT OUTER JOIN {$this->reefine->dbprefix}channel_data {$this->channel_data_alias} ON {$this->reefine->dbprefix}channel_titles.entry_id = $this->channel_data_alias.entry_id  ";
+			} else {
+				return " LEFT OUTER JOIN $this->channel_data_alias ON {$this->reefine->dbprefix}channel_titles.entry_id = $this->channel_data_alias.entry_id  ";
+			}
 		}
 	}
 	
