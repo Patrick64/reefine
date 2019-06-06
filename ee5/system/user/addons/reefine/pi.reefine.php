@@ -455,7 +455,7 @@ class Reefine {
 		$this->start_on = $this->EE->TMPL->fetch_param('start_on', '');
 		$this->fixed_order = $this->EE->TMPL->fetch_param('fixed_order', '');
 		$this->show_empty_filter_groups = ($this->EE->TMPL->fetch_param('show_empty_filter_groups', '') == 'no' ? false : true);
-		
+		$this->show_separate_only = $this->EE->TMPL->fetch_param('show_separate_only', '');
 		
 		// get list of channel ids to choose from
 		if (!empty($filter_channel)) {
