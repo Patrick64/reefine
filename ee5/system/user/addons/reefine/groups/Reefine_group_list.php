@@ -94,6 +94,10 @@ class Reefine_group_list extends Reefine_group {
 		if (isset($this->reefine->channel_ids)) {
 			$sql .= " AND {$this->dbprefix}channel_titles.channel_id IN (" . implode(',',$this->reefine->channel_ids) . ")";
 		}
+		if ($this->reefine->status) {
+			$sql .= " AND " . $this->reefine->get_status_where_clause($this->reefine->status,"{$this->reefine->dbprefix}channel_titles.status");
+		}
+		
 		if ($extra_clause!='')
 			$sql .= " AND ({$extra_clause}) ";
 		// Wrap sql statement in select statement so we can get total of each distinct entry
