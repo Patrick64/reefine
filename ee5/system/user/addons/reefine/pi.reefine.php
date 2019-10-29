@@ -1629,7 +1629,7 @@ require("fields/Reefine_field_category.php");
 
 require("fields/Reefine_field_store.php");
 
-require("fields/Reefine_field_publisher.php");
+//require("fields/Reefine_field_publisher.php");
 
 require('fields/Reefine_field_relationship.php');
 
@@ -1637,7 +1637,7 @@ require('fields/Reefine_field_parents_relationship.php');
 
 require('fields/Reefine_field_playa.php');
 
-require('fields/Reefine_field_publisher_playa.php');
+//require('fields/Reefine_field_publisher_playa.php');
 
 require('fields/Reefine_field_grid.php');
 
