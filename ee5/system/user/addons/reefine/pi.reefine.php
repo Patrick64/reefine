@@ -1167,8 +1167,12 @@ class Reefine {
 		// http://php.net/manual/en/function.mb-split.php
 		foreach ($chars as $char) {
 			// this if from ee5/system/ee/legacy/core/Input.php _clean_input_keys()
-			if ( ! preg_match("/^[a-z0-9:_ \-".EMOJI_REGEX."]+$/iu", $char)) {
-				$result .= "--" . ord($char) . "--";
+			if ( ! preg_match("/^[a-z0-9:_ \-".EMOJI_REGEX."]+$/iu", $char) || strpos("#",$char) !== false) {
+				if (class_exists('IntlChar')) {
+					$result .= "--" . IntlChar::ord($char) . "--";
+				} else {
+					$result .= "--" . ord($char) . "--";
+				}
 			}	else {
 				$result .= $char;
 			}
@@ -1223,7 +1227,12 @@ class Reefine {
 				"/\-\-([0-9]+)\-\-/",
 				function ($matches) {
 					// $char = preg_replace("-","",$matches[0]);
-					return chr($matches[1]);
+					if (class_exists('IntlChar')) {
+						$ord = intval($matches[1]);
+						return IntlChar::chr($ord);
+					} else {
+						return chr($matches[1]);
+					}
 				},
 				$value
 			);
