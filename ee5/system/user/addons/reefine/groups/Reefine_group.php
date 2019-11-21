@@ -497,8 +497,12 @@ class Reefine_group {
 		$pos_a = stripos('|' . $this->orderby . '|','|' . $a['filter_value'] . '|');
 		$pos_b = stripos('|' . $this->orderby . '|','|' . $b['filter_value'] . '|');
 		
-		if ($pos_a===false || $pos_b === false || $pos_a == $pos_b)
-			return $this->compare_filter_by_value($a, $b);
+		if ($pos_a === false)
+			return -1;
+		else if ($pos_b === false) 
+			return 1;
+		else if ($pos_a === $pos_b) 
+			return 0;
 		else
 			return $this->sort_filter($pos_a > $pos_b ? 1 : -1);
 	}
