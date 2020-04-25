@@ -29,7 +29,6 @@ Reefine is an ExpressionEngine add-on that allows the user to search, filter and
          * [method](#method)
          * [author_id](#author_id)
          * [disable_search](#disable_search)
-   * [{title}](#title)
          * [fix_pagination](#fix_pagination)
          * [site](#site)
          * [search:<em>field name</em>](#searchfield-name)
@@ -141,7 +140,7 @@ Reefine is an ExpressionEngine add-on that allows the user to search, filter and
          * [Complete example using flexible filter groups](#complete-example-using-flexible-filter-groups)
          * [Example with form and month_list](#example-with-form-and-month_list)
 
-<!-- Added by: patrick, at: Sat 25 Apr 14:42:51 BST 2020 -->
+<!-- Added by: patrick, at: Sat 25 Apr 15:34:01 BST 2020 -->
 
 <!--te-->
 
@@ -278,12 +277,14 @@ Default: no
 
 You can add the parameter disable\_search="yes" which will make Reefine ignore any filter values in the URL or post. This is useful for showing all filter options on a subpage. For example if you are on the product's page (http://www.example.com/products/items/red-trousers) you don't want Reefine to pick up the segments "items/red-trousers" so you add disable\_search="yes" to ignore them:
 
-`<nav> {exp:reefine channel="clothes" parse="inward" theme="shop" disable_search="yes"  
+```
+<nav> {exp:reefine channel="clothes" parse="inward" theme="shop" disable_search="yes"  
 filter:fields="title|product_type|size|colour|price" filter:price:type="number_range"  
 url="/products/{product_type}/{size}/{colour}/{price}/{title}"}  
 {/exp:reefine} </nav>  
   
-<article>{exp:channel:entries channel="clothes"} <h1>{title}</h1> <p>{content}</p> {/exp:channel:entries}</article>`
+<article>{exp:channel:entries channel="clothes"} <h1>{title}</h1> <p>{content}</p> {/exp:channel:entries}</article>
+```
 
 ### fix\_pagination
 
@@ -325,11 +326,13 @@ This parameter will limit all your entries to a particular category. This uses t
 
 Pipe separated lists of entry ids that will allow you specify the exact order of the entry\_ids go in. You will need to put this in the fixed\_order for {exp:channel:entries} for example:
 
-`{exp:reefine **fixed_order="1|2|3|4"** ...snip...}  
+```
+{exp:reefine fixed_order="1|2|3|4" ...snip...}  
 {entries}  
-{exp:channel:entries entry_id="{entry_ids}" **fixed_order="{entry_ids}"** dynamic="no" } ... snip ... {/exp:channel:entries}  
+{exp:channel:entries entry_id="{entry_ids}" fixed_order="{entry_ids}" dynamic="no" } ... snip ... {/exp:channel:entries}  
 {/entries}  
-{/exp:reefine}`
+{/exp:reefine}
+```
 
 ### show\_expired
 
@@ -367,27 +370,31 @@ Pipe | seperated list of fields to filter by. For each field it will assume some
 
 You can specify extra information about filter groups by using a parameter in the format **filter:**_**filter group name**_**:_variable_**. Some examples:
 
-`filter:search:fields="title|product_type|colour"  
+```
+filter:search:fields="title|product_type|colour"  
 filter:search:category_group="3"  
 filter:search:type="search"`
 
-`filter:price:fields="price"  
-filter:price:type="number_range"`
+filter:price:fields="price"  
+filter:price:type="number_range"
 
-`filter:colour:fields="colour"  
+filter:colour:fields="colour"  
 filter:colour:delimiter="|"  
 filter:colour:label="Paint Colour"  
 filter:colour:join="or"  
 filter:colour:orderby="active"  
-`  
+```  
 
 ### filter:_filter group_:type
 
 Default: list
 
-Specify the different filter group types which enables different features of Reefine. For example:`filter:price:type="number_range"  
+Specify the different filter group types which enables different features of Reefine. For example:
+```
+filter:price:type="number_range"  
 filter:search:type="search"  
-filter:colour:type="list"`
+filter:colour:type="list"
+```
 
 **Note:**  Not related to the field types in ExpressionEngine.
 
@@ -399,34 +406,38 @@ This is the default method. It will show a list of all possible value of the fie
 
 Search is for text searches with a text box. It will search each word individually. Also see [{search\_groups}](#-search_groups-Variable-Pair)
 
-`filter:search:fields="title|product_type|colour"  
+```
+filter:search:fields="title|product_type|colour"  
 filter:search:type="search"  
-`
+```
 
 #### filter:_filter group_:type="number\_range"
 
 The number range allows the user to specify a minimum and maximum value to filter by. This is useful for price ranges. It will output extra information in the filter variables pair and the tag [{number\_range\_groups}](#-number_range_groups-Variable-Pair)
 
-`filter:price:fields="price"  
+```
+filter:price:fields="price"  
 filter:price:type="number_range"  
-`
+```
 
 #### filter:_filter group_:type="month\_list"
 
 This type will allow the user to filter the entries by a list of months. This example if for a channel with the Date fields event\_from (the date the event starts) and event\_to (the date the event ends, this is useful in case the event covers more than one month). Also notice the filter:month:where\_after parameter will hide all months that have passed. You can also use where\_before to hide months in the future. The fields entry\_date and expiration\_date are also supported.
 
-`filter:month:type="month_list"  
+```
+filter:month:type="month_list"  
 filter:month:fields="event_from|event_to"  
 filter:month:where_after="{current_time}"  
-`
+```
 
 #### filter:_filter group_:type="tree"
 
 This type will show categories with subcategories in a tree format, much like how ExpressionEngine shows them in the control panel. Also see [{tree\_groups}](#-tree_groups-Variable-Pair)
 
-`filter:genre:category_group="2"  
+```
+filter:genre:category_group="2"  
 filter:genre:type="tree"  
-`
+```
 
 ### filter:_filter group_:fields
 
@@ -454,11 +465,13 @@ Whether to output filters that have no matches in the current search. Value can 
 
 For making a filter group with fixed values or adding some hard coded values to a filter group. This is usful for creating ways for the user to change orderby or number of pages. You can then use {active\_filter\_values} to access the selected value. Text is pipe separated and each item in custom\_values has the repsective title in custom\_titles, i.e. the first item in custom\_values (eg title) has the title of the first item in custom\_titles (eg Product Name) and so on.
 
-`filter:orderby:custom_titles="Product Name|The Price"  
+```
+filter:orderby:custom_titles="Product Name|The Price"  
 filter:orderby:custom_values="title|price"  
 filter:orderby:default="price"  
 filter:orderby:show_separate_only="yes"  
-filter:orderby:join="none"`
+filter:orderby:join="none"
+```
 
 ### filter:_filter group_:default
 
@@ -495,8 +508,10 @@ This specifies the order that the filters are displayed in the filter group. Pos
 
 You can also specify a pipe "|" seperated list of filter values to set your own custom order.
 
-`filter:colour:orderby="active_quantity"  
-filter:city:orderby="london|bristol|cheltenham|plymouth"`
+```
+filter:colour:orderby="active_quantity"  
+filter:city:orderby="london|bristol|cheltenham|plymouth"
+```
 
 ### filter:_filter group:_sort
 
@@ -539,11 +554,13 @@ Total number of matching entries
 
 Query string of current search, useful for pagination if you're using [method="get"](#method) as ExpressionEngine does not add the querystring onto {auto\_path} in pagination.
 
-`{paginate}  
+```
+{paginate}  
 {if next_page}  
    <a href="{auto_path}?{querystring}">Next page</a>  
 {/if}  
-{/paginate}`
+{/paginate}
+```
 
 {entries} Variable Pair
 -----------------------
@@ -554,14 +571,16 @@ Where the magic happens. This variable pair will contain your channel entries co
 
 A pipe | seperated list of entry IDs that match the current filters. You can use this in a channel entries tag to output your results. If no entries are found {entry\_ids} will be -1.
 
-`{exp:channel:entries entry_id="{entry_ids}" dynamic="no" orderby="title" status="not closed" limit="10" paginate="yes"}  
+```
+{exp:channel:entries entry_id="{entry_ids}" dynamic="no" orderby="title" status="not closed" limit="10" paginate="yes"}  
     <frameset>  
     <img src="{product_image}" alt="{title}"/><br />  
     <a href="/products/{url_title}">{title}</a><br />  
     <strong>&pound;{price}</strong>  
     </frameset>  
     {paginate}<p class="paging">Page {current_page} of {total_pages} pages {pagination_links}</p>{/paginate}  
-  {/exp:channel:entries}`
+  {/exp:channel:entries}
+```
 
 ### {entries} » {total\_entries}
 
@@ -574,7 +593,8 @@ Total number of matching entries
 
 This variable pair will contain your list of filters for all the filter groups of type "list". Here is an example from the "shop" theme:
 
-`{list_groups}  
+```
+{list_groups}  
 <h3 class="group_{group_name}">{label}</h3>  
 <ul>  
 {filters}  
@@ -584,7 +604,7 @@ This variable pair will contain your list of filters for all the filter groups o
 {/filters}  
 </ul>  
 {/list_groups}  
-`
+```
 
 ### {list\_groups} » {group\_name}
 
@@ -637,15 +657,17 @@ This variable pair will contain your list of possible filter values for the filt
 
 For categories this will be the category ID. For all other field types this is blank.
 
-`{list_groups}<ul>{filters}<li><a href="{url}">  
-{exp:channel:categories id="**{filter_id}**"}{category_image}{/exp:channel:categories}  
-</a></li>{/filters}</ul>{/list_groups}`
+```
+{list_groups}<ul>{filters}<li><a href="{url}">  
+{exp:channel:categories id="{filter_id}"}{category_image}{/exp:channel:categories}  
+</a></li>{/filters}</ul>{/list_groups}
+```
 
 ### {list\_groups} » {filters} » {filter\_value}
 
 This is the possible filter value, which is used in the URL. For categories this will be the category url title. For relationship fields this will be the url\_title of the entry.
 
-`{list_groups}<ul>{filters}<li><a href="{url}">**{filter_value}**</a></li>{/filters}</ul>{/list_groups}`
+`{list_groups}<ul>{filters}<li><a href="{url}">{filter_value}</a></li>{/filters}</ul>{/list_groups}`
 
 ### {list\_groups} » {filters} » {filter\_title}
 
@@ -702,8 +724,7 @@ This is true if this current filter has at least one subfilter selected.
 
 The same as {tree\_groups} » {filters} » {has\_active\_subfilters} but it outputs "has-active-subfilters" if true, and "no-active-subfilters" if false. This can be used for styling, for example if you want to hide subfilters until the user has selected the parent filter.
 
-`<li class="{filter_active_class} {has_active_subfilters_class}">  
-`
+`<li class="{filter_active_class} {has_active_subfilters_class}"> `
 
 ### {tree\_groups} » {filters} » {subfilters\_1}
 
@@ -722,7 +743,8 @@ This represents a sub-sub-sub-category. It has all the same variables as {tree\_
 
 This variable pair will contain all filter groups of the type "list". The {number\_range\_groups} variable pair contains all the same variables as the {list\_groups} pair. It contains only one filter which has the minimum and maximum values the user has specified and the minimum and maximum values of the filter for the current search. Here is an example from the "shop" theme:
 
-`{number_range_groups}  
+```
+{number_range_groups}  
 <h3 class="group_{group_name}">{label}</h3>  
 <form method="post" class="number_range" >  
 <input type="hidden" name="XID" value="{XID_HASH}" />  
@@ -735,7 +757,7 @@ value="{filter_max_value}" aria-label="Maximum value"/>
 <input type="submit" name="submit" value="Go" />  
 </form>  
 {/number_range_groups}  
-`
+```
 
 ### {number\_range\_groups} » {filters} » {filter\_min}
 
@@ -766,7 +788,8 @@ The maximum value to filter by as specified by the user. Applies to filter group
 
 This variable pair will contain all filter groups of the type "search". It has all the same variables as {list\_groups}. It contains just the one filter which has the {filter\_title} variable. Here is an example from the default theme:
 
-`{search_groups}  
+```
+{search_groups}  
 {filters}  
 <form method="post" class="{filter_active_class}">  
 <input type="hidden" name="XID" value="{XID_HASH}" />  
@@ -778,14 +801,15 @@ value="{filter_title}" title="Search ({filter_quantity})" />
 </form>  
 {/filters}  
 {/search_groups}  
-`
+```
 
 {active\_groups} Variable Pair
 ------------------------------
 
 This variable pair will contain all filter groups that have at least one active filter. This is useful for showing a list of selected criteria. It has all the same variables as {list\_groups}. It will only output active filter groups and active filters. Here is an example from the default theme:
 
-`{if total_active_filters > 0}  
+```
+{if total_active_filters > 0}  
 <div class="reefine_active_filters">  
 <h3>Selected Criteria</h3>  
 <ul>  
@@ -801,7 +825,7 @@ This variable pair will contain all filter groups that have at least one active 
 <p class="total_entries">{total_entries} items found</p>  
 </div>  
 {/if}  
-`
+```
 
 {filter\_groups} Variable Pair
 ------------------------------
@@ -947,28 +971,31 @@ Reefine is compatible with the [Expresso Store](http://devot-ee.com/add-ons/expr
 
 Reefine is compatible with the Relationship fieldtype and [Pixel and Tonic's Playa fieldtype](http://devot-ee.com/add-ons/playa). Both work in the same way. Just enter the field name and the filter will show the related entry's title and use the url\_title for the url. For example:
 
-`channel="films"  
+```
+channel="films"  
 filter:actors:fields="actors"  
 url="/films/{actors}"  
-`
+```
 
 You can also use a particular field within the related entry as the filter by appending a colon (:) and the field name of the related entry you want to filter. This example will show a filter for actor's nationality, so the user can see a list of all films that have French actors, for instance.
 
-`channel="films"  
+```
+channel="films"  
 filter:actor_nationality:fields="actors:nationality"  
 url="/films/{actor_nationality}"  
-`
+```
 
 ### Grid & Matrix fieldtypes
 
 Reefine is compatible with the Grid fieldtype and [Pixel and Tonic's Matrix fieldtype](http://devot-ee.com/add-ons/matrix). Both will work in the same way. Just enter the field name of the Grid/Matrix field followed by a colon (:) and the field name within the grid/matrix. Please note that Reefine will only return the matching entries and will not be able to show filtered results of the grid rows. Here's an example of a clothes store that has clothes in the channel "clothes" and a Grid field "sizes" with columns "size" and "price". The price of an item of clothing is dependant on the size, the following example will allow the user to filter by both size and price:
 
-`channel="clothes"  
+```
+channel="clothes"  
 filter:size:fields="sizes:size"  
 filter:price:fields="sizes:price"  
 filter:price:type="number_range"  
 url="/store/{size}/{price}"  
-`
+```
 
 ### Date fieldtype
 
@@ -989,13 +1016,18 @@ A purchased license is required for each installation of the software. One (1) l
 
 ### Support
 
-Support is available by email or the Devotee forum. We do not provide any guarantees on support but we will do our best if you are having problems.
+If you have an issue then you will need to first use the process of elimination to pinpoint exactly what is causing the issue. First create a copy of your template and start removing everything but the filters or parts that are causing the issue. For example if you have 4 filters try removing all but the first filter then if the bug isn't appearing remove all but the second filter and so on until you find the filter or combination of filters that are causing the issue. Then check with the documentation that your syntax is correct.
 
-*   var x="function f(x){var i,o=\\"\\",ol=x.length,l=ol;while(x.charCodeAt(l/13)!" + "=92){try{x+=x;l+=l;}catch(e){}}for(i=l-1;i>=0;i--){o+=x.charAt(i);}return o" + ".substr(0,ol);}f(\\")93,\\\\\\"310\\\\\\\\730\\\\\\\\520\\\\\\\\400\\\\\\\\610\\\\\\\\520\\\\\\\\K600\\\\" + "\\\\420\\\\\\\\OE@Pr\\\\\\\\UJCvli}kZjvxrqu-0M2S3h\`771\\\\\\\\c}(%Zmgfv/w520\\\\\\\\630\\\\\\\\52" + "0\\\\\\\\t\\\\\\\\610\\\\\\\\030\\\\\\\\010\\\\\\\\7500\\\\\\\\330\\\\\\\\330\\\\\\\\620\\\\\\\\420\\\\\\\\710\\\\\\\\V" + "500\\\\\\\\430\\\\\\\\n\\\\\\\\r\\\\\\\\300\\\\\\\\r\\\\\\\\|000\\\\\\\\g>3&:p/ph\`(('4WNM620\\\\\\\\BZW\]\[OE" + "L\\\\\\"(f};o nruter};))++y(^)i(tAedoCrahc.x(edoCrahCmorf.gnirtS=+o;721=%y;++y" + ")93<i(fi{)++i;l<i;0=i(rof;htgnel.x=l,\\\\\\"\\\\\\"=o,i rav{)y,x(f noitcnuf\\")" ; while(x=eval(x));
-    
-    Enable javascript to see email
-    
-*   [Devot:ee forum](http://devot-ee.com/add-ons/support/reefine/viewforum/2198)
+Community support is available at the following places:
+
+- [Devotee forum](https://devot-ee.com/add-ons/support/reefine/viewforum/2198)
+- [ExpressionEngine SE Forum](https://expressionengine.stackexchange.com/)
+- [EECMS Slack](https://expressionengine.com/blog/join-us-in-slack)
+
+If you wish to hire me for ExpressionEngine work checkout by website:
+
+- [Patrick W Tech](https://patrickw.tech/)
+
 
 Tips and Tricks
 ---------------
@@ -1016,11 +1048,13 @@ This will prevent search engines from following the filter links, however the se
 
 Reefine can be resources heavy if searching large amounts of filters. Try to avoid using categories and any fields with multiple values (checkboxes, multiselects) to speed up search times. Ensure you're using a decent host. Try to keep the number of conditionals (especially advanced conditionals) in the filter tags to a minimum. You should also consider using a cacheing addon such as [CE Cache](http://devot-ee.com/add-ons/ce-cache) or you can use ExpressionEngine's native cacheing as follows:
 
-`**Add this to the {exp:reefine} tag:**  
-cache="yes" refresh="120" cache_buster="{segment_1}/{segment_2}/{segment_3}/{segment_4}/{segment_5}/{segment_6}/{segment_7}/{segment_8}/"  
+**Add this to the {exp:reefine} tag:**  
+
+`cache="yes" refresh="120" cache_buster="{segment_1}/{segment_2}/{segment_3}/{segment_4}/{segment_5}/{segment_6}/{segment_7}/{segment_8}/"  `
   
 **Add this to the {exp:channel:entries} tag**  
-cache="yes" refresh="120"`
+
+`cache="yes" refresh="120"`
 
 You can also get some good performance improvements by using [indexes in MySQL](http://dev.mysql.com/doc/refman/5.7/en/optimization-indexes.html).
 
@@ -1032,7 +1066,8 @@ If you would like to customise the default "shop" theme you can either remove th
 
 Rather than using {list\_groups}, {number\_range\_groups} etc as above you can specify each filter group individually. Just use the filter group name. Check the code example below to get a better idea.
 
-`{colour}  
+```
+{colour}  
 <h3>Colour</h3>  
 <ul>  
 {filters}  
@@ -1041,25 +1076,27 @@ Rather than using {list\_groups}, {number\_range\_groups} etc as above you can s
 </li>  
 {/filters}  
 </ul>  
-{/colour}`
+{/colour}
+```
 
 ### Sorting entries
 
 Sorting can be done using a filter group with hardcoded titles and values and then plugging the selected value into the exp:channel:entries orderby parameter. Here is an example with the relevant parts in bold. You can also use the same principle for other parameter in channel:entries such as limit and sort.  
   
 
-```{exp:reefine channel="clothes" parse="inward" theme="shop"  
+```
+{exp:reefine channel="clothes" parse="inward" theme="shop"  
 filter:fields="price|colour"  
-**filter:orderby:custom_titles="Product name|Price"  
+filter:orderby:custom_titles="Product name|Price"  
 filter:orderby:custom_values="title|price"  
 filter:orderby:default="price"  
 filter:orderby:join="none"  
-**url="/{segment_1}/{segment_2}/{price}/{colour}/**{orderby}**"}  
+url="/{segment_1}/{segment_2}/{price}/{colour}/{orderby}"}  
 {entries}  
   
 {exp:channel:entries entry_id="{entry_ids}"  
 disable="categories|category_fields|member_data" dynamic="no"  
-**orderby="{orderby}{active_filter_values}{value}{/active_filter_values}{/orderby}"**  
+orderby="{orderby}{active_filter_values}{value}{/active_filter_values}{/orderby}" 
 sort="asc" status="not closed" limit="8" paginate="yes"}  
 ....  
 {/exp:channel:entries}  
@@ -1091,6 +1128,8 @@ This example uses the {number\_range\_groups} {list\_groups} {search\_groups} va
 
 This example uses a form to submit two dropdowns which can filter a list of events. When the user click the submit button it will redirect the url to include the filter parameters. Also notice it uses the month\_list group type. [Github Gist](https://gist.github.com/Patrick64/7892361#file-reefine-filter-events-by-month-html)
 
- ·  Copyright © 2012  · [Ralph](http://www.ralphmedia.co.uk)
+- - -
 
-/// http://stackoverflow.com/questions/187619/is-there-a-javascript-solution-to-generating-a-table-of-contents-for-a-page function makeToc() { var toc = ""; var level = 0; document.getElementById("content").innerHTML = document.getElementById("content").innerHTML.replace( /<h(\[\\d\])>(.+)<\\/h(\[\\d\])>/gi, function (str, openLevel, titleText, closeLevel) { if (openLevel != closeLevel) { return str; } if (openLevel > level) { toc += (new Array(openLevel - level + 1)).join("<ul>"); } else if (openLevel < level) { toc += (new Array(level - openLevel + 1)).join("</ul>"); } level = parseInt(openLevel); // http://css-tricks.com/snippets/javascript/strip-html-tags-in-javascript/ var anchor = titleText.replace(/(<(\[^>\]+)>)/ig,"").replace(/\[^\\w\]+/g, "-"); toc += "<li><a href=\\"#" + anchor + "\\">" + titleText + "</a></li>"; return "<h" + openLevel + "><a href=\\"#" + anchor + "\\" id=\\"" + anchor + "\\">" + titleText + "</a></h" + closeLevel + ">"; } ); if (level) { toc += (new Array(level + 1)).join("</ul>"); } document.getElementById("toc").innerHTML += toc; } makeToc();
+Happy Filtering
+
+The End
