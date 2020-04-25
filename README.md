@@ -1024,9 +1024,9 @@ Community support is available at the following places:
 - [ExpressionEngine SE Forum](https://expressionengine.stackexchange.com/)
 - [EECMS Slack](https://expressionengine.com/blog/join-us-in-slack)
 
-If you wish to hire me for ExpressionEngine work checkout by website:
+If you wish to hire me for ExpressionEngine work checkout my website:
 
-- [Patrick W Tech](https://patrickw.tech/)
+- [patrickw.tech](https://patrickw.tech/)
 
 
 Tips and Tricks
