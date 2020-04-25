@@ -1010,9 +1010,7 @@ About Reefine
 
 ### License
 
-A purchased license is required for each installation of the software. One (1) license grants the right to perform one (1) installation. Each additional installation of this software requires an additional purchased license.
-
-[Read full license](../license.txt)
+[View License](https://github.com/Patrick64/reefine/blob/master/LICENSE)
 
 ### Support
 
