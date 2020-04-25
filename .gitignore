@@ -3,7 +3,7 @@
 
 # Except..
 !.gitignore
-
+!README.md
 !themes/
 !themes/user
 !themes/user/reefine
