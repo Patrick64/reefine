@@ -3,10 +3,11 @@ Reefine - ExpressionEngine addon
 
 Reefine is an ExpressionEngine add-on that allows the user to search, filter and refine channel entries (eg products) on your site. It is aimed at ecommerce sites but can be used for sorting any kind of data stored in channel entries.
 
+**Note: I may not have the time to make this EE6 compatible but PRs are welcome!**
+
 *   [Download for EE5](https://github.com/Patrick64/reefine/archive/master.zip)
 *   [Download for previous versions of EE](https://github.com/Patrick64/reefine/archive/all-versions.zip)
 *   [About the developer](http://patrickw.tech/)
-
 
   
 
