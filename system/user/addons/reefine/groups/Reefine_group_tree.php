@@ -174,9 +174,12 @@ class Reefine_group_tree extends Reefine_group_category {
 					// number range doessome stuff
 					$this->format_filter_for_output($filter,$filter_out);
 					
-					// $subfilters, $has_active_subfilters 
-					extract($this->get_subfilters_for_output($only_show_active, $filter['filter_id'],$level+1));
-					
+					// call recursive function on subfilter 
+					$subfilter_output = $this->get_subfilters_for_output($only_show_active, $filter['filter_id'],$level+1)																	;
+					$subfilters = $subfilter_output['subfilters'];
+					// fix for issue https://github.com/Patrick64/reefine/issues/3
+					$has_active_subfilters = $has_active_subfilters || $subfilter_output['has_active_subfilters'];
+
 					// set values for if it has an active subfilter, useful for expand/collapse trees
 					$filter_out['has_active_subfilters'] = $has_active_subfilters;
 					$filter_out['has_active_subfilters_class'] = ( $has_active_subfilters ? 'has-active-subfilters' : 'no-active-subfilters' );
