@@ -7,7 +7,9 @@ Reefine is an ExpressionEngine add-on that allows the user to search, filter and
 *   [Download for previous versions of EE](https://github.com/Patrick64/reefine/archive/all-versions.zip)
 *   [About the developer](http://patrickw.tech/)
 
-  
+### Sponsors
+
+[Become a sponsor](https://github.com/sponsors/Patrick64)
 
 ### Table of Contents
 <!-- run ~/opt/gh-md-toc --insert README.md to update -->

@@ -20,3 +20,10 @@
 !docs
 !docs/*
 !docs/*/*
+!_tests
+!_tests/*
+!_tests/*/*
+!_tests/*/*/*
+!_tests/*/*/*/*
+!.github
+!.github/*
