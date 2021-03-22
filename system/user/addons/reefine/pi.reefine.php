@@ -1135,7 +1135,7 @@ class Reefine {
 		foreach ($this->filter_groups as $group) {
 			if (isset($filter_values[$group->group_name])) $qs = array_merge($qs,$group->get_filter_querystring_from_filter_values($filter_values[$group->group_name]));
 		}
-		return implode($qs,'&');
+		return implode('&',$qs);
 	}
 	
 	

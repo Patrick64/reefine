@@ -5,7 +5,7 @@ return array(
   'author_url'  => 'http://patrickw.tech',
   'name'        => 'Reefine',
   'description' => 'Reefine: Refine, sort, filter your entries',
-  'version'     => '3.2.2',
+  'version'     => '3.2.3',
   'namespace'   => 'Reefine',
-  'docs_url' => 'https://www.ralphmedia.co.uk/docs/reefine/'
+  'docs_url' => 'https://github.com/Patrick64/reefine#reefine---expressionengine-addon'
 );

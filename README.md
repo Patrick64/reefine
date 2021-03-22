@@ -3,8 +3,9 @@ Reefine - ExpressionEngine addon
 
 Reefine is an ExpressionEngine add-on that allows the user to search, filter and refine channel entries (eg products) on your site. It is aimed at ecommerce sites but can be used for sorting any kind of data stored in channel entries.
 
-*   [Download for EE5](https://github.com/Patrick64/reefine/archive/master.zip)
-*   [Download for previous versions of EE](https://github.com/Patrick64/reefine/archive/all-versions.zip)
+*   [Download for EE5 / EE6](https://github.com/Patrick64/reefine/archive/master.zip)
+*   [Download for EE2, EE3 or EE5](https://github.com/Patrick64/reefine/archive/all-versions.zip)
+*   [Live demo](http://reefine-demo.patrickw.tech/reefine/demo_basic)
 *   [About the developer](http://patrickw.tech/)
 
 ### Sponsors
@@ -145,11 +146,6 @@ Reefine is an ExpressionEngine add-on that allows the user to search, filter and
 
 <!--te-->
 
-Documentation Versions
-----------------------
-
-*   [Document for previous versions of Reefine](http://www.ralphmedia.co.uk/docs/reefine/)
-
 Installation
 ------------
 
@@ -178,7 +174,7 @@ First download and extract the Reefine ZIP file. There are folders, ee2, ee3, ee
 Hello world
 -----------
 
-This is a small tutorial to create a clothing shop filter. Please refer to the [Ralph](http://www.ralphmedia.co.uk/reefine/demo_basic) website for a live demo.
+This is a small tutorial to create a clothing shop filter. [View a live demo](http://reefine-demo.patrickw.tech/reefine/demo_basic).
 
 1.  Create a Channel called "clothes"
 2.  Create a Field group called "clothes"

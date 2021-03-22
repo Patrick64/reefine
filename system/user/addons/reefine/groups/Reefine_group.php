@@ -190,7 +190,7 @@ class Reefine_group {
 		if (class_exists($class_name)) {
 			return new $class_name($reefine,$group_name);
 		} else {
-			throw new Exception("Reefine error: filter:$group_name:type=\"$group_type\" is not valid as group type \"$group_type\" does not exist. Consult docs for available group types https://www.ralphmedia.co.uk/docs/reefine/#filter-filter-group-type ");
+			throw new Exception("Reefine error: filter:$group_name:type=\"$group_type\" is not valid as group type \"$group_type\" does not exist. Consult docs for available group types https://github.com/Patrick64/reefine#filterfilter-grouptype ");
 		}
 	}
 	
