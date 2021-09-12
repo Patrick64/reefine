@@ -191,7 +191,8 @@ class Reefine_group_month_list extends Reefine_group_list {
 	 * @see Reefine_group::get_field_value_column()
 	 */
 	public function get_field_value_column($field,$table='') {
-		return "DATE_ADD(LAST_DAY(DATE_SUB(from_unixtime({$field->get_value_column($table)}), interval 30 day)), interval 1 day)";
+		return "str_to_date(concat('1-',concat(concat( MONTH(FROM_UNIXTIME({$field->get_value_column($table)})),'-'),YEAR(FROM_UNIXTIME({$field->get_value_column($table)})))),'%d-%m-%Y')";
+		
 	}
 
 }
