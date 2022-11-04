@@ -31,6 +31,7 @@ No sponsors yet - [Become a sponsor](https://github.com/sponsors/Patrick64)
          * [method](#method)
          * [author_id](#author_id)
          * [disable_search](#disable_search)
+         * [disable_multiple_selected_groups](#disable_multiple_selected_groups)
          * [fix_pagination](#fix_pagination)
          * [site](#site)
          * [search:<em>field name</em>](#searchfield-name)
@@ -282,6 +283,14 @@ url="/products/{product_type}/{size}/{colour}/{price}/{title}"}
   
 <article>{exp:channel:entries channel="clothes"} <h1>{title}</h1> <p>{content}</p> {/exp:channel:entries}</article>
 ```
+
+### disable_multiple_selected_groups
+
+Default: no
+
+Make it so users can only select one filter group at a time (useful for performance problems).
+
+`disable_multiple_selected_groups="yes"`
 
 ### fix\_pagination
 

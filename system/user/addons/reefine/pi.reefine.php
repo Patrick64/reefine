@@ -145,6 +145,12 @@ class Reefine {
 	 * If a filter group has no filters should it be prevented from being output?
 	 */
 	var $show_empty_filter_groups = false;
+
+	/**
+	 * Make it so users can only select one filter group at a time (useful for performance problems)
+	 */
+	var $disable_multiple_selected_groups = false;
+
 	/**
 	 * @var array default settings for group if not otherwise specified
 	 */
@@ -456,7 +462,8 @@ class Reefine {
 		$this->fixed_order = $this->EE->TMPL->fetch_param('fixed_order', '');
 		$this->show_empty_filter_groups = ($this->EE->TMPL->fetch_param('show_empty_filter_groups', '') == 'no' ? false : true);
 		$this->show_separate_only = $this->EE->TMPL->fetch_param('show_separate_only', '');
-		
+		$this->disable_multiple_selected_groups = $this->EE->TMPL->fetch_param('disable_multiple_selected_groups', false);
+
 		// get list of channel ids to choose from
 		if (!empty($filter_channel)) {
 			$this->channel_ids = $this->get_channel_ids($filter_channel);
@@ -1063,9 +1070,12 @@ class Reefine {
 				else
 					$filter_values[$group_name] = $group->get_values_for_filter($filter_value, $is_for_redirection);
 			} else {
-				$filter_values[$group_name] = $group->values;
+				if (!$this->disable_multiple_selected_groups) {
+					$filter_values[$group_name] = $group->values;
+				}
 			}
 		}
+		
 		return $filter_values;
 	}
 	
