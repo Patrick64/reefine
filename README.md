@@ -51,6 +51,7 @@ No sponsors yet - [Become a sponsor](https://github.com/sponsors/Patrick64)
             * [filter:<em>filter group</em>:type="tree"](#filterfilter-grouptypetree)
          * [filter:<em>filter group</em>:fields](#filterfilter-groupfields)
          * [filter:<em>filter group</em>:label](#filterfilter-grouplabel)
+         * [filter:<em>filter group</em>:locale](#filterfilter-grouplocale)
          * [filter:<em>filter group</em>:show_empty_filters](#filterfilter-groupshow_empty_filters)
          * [filter:<em>filter group</em>:custom_titles](#filterfilter-groupcustom_titles)
          * [filter:<em>filter group</em>:custom_values](#filterfilter-groupcustom_values)
@@ -848,6 +849,16 @@ This variable pair will output all filters regardless of type. The variables ava
 
 Change Log
 ----------
+
+### Version 3.3.0
+
+Release 2022-11-23
+
+* Fix Issue #10 Large numbers with commas cut off at first comma in number_range
+* add parameter disable_multiple_selected_groups
+* #6 Month list: fix date overlap issue
+* fix PHP 7.4 warning, update demo url, remove old docs
+* #3 fix has_active_subfilters problem
 
 ### Version 3.2.0
 
