@@ -459,6 +459,14 @@ The label for the filter group.
 
 `filter:colour:label="Paint Colour"`
 
+### filter:_filter group_:locale
+
+Default: Server's default locale
+
+Applies to `number_range` groups only. Locale in which the number would be formatted (locale name, e.g. en_CA). This effects how the number is parsed and displayed. This does not effect how the number appears in the URL.
+
+`filter:price:locale="de_DE"`
+
 ### filter:_filter group_:show\_empty\_filters
 
 Whether to output filters that have no matches in the current search. Value can be yes or no, default is "no".

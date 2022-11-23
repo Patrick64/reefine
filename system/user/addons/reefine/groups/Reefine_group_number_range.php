@@ -1,9 +1,23 @@
 <?php
 class Reefine_group_number_range extends Reefine_group {
 	public $type = 'number_range';
+
+	/** If locale is set then number will be parsed using that locale (eg 9.999,99 = 9999.99 for locale DE_de) */
+	public $locale = '';
+
 	function __construct($reefine,$group_name) {
 		parent::__construct($reefine,$group_name);
 		$this->show_empty_filters=true;
+	}
+
+	/**
+	 * (non-PHPdoc)
+	 * @see Reefine_group::set_settings_from_parameters()
+	 */
+	public function set_settings_from_parameters() {
+		parent::set_settings_from_parameters();
+		// add rest of settings which are strings/arrays/booleans
+		$this->reefine->add_filter_group_setting($this, 'locale', locale_get_default());
 	}
 
 	public function post_contains_filter_value() {
@@ -13,8 +27,11 @@ class Reefine_group_number_range extends Reefine_group {
 	}
 
 	public function get_filter_value_from_post() {
-		$value_min = $this->reefine->EE->input->get_post($this->group_name.'_min');
-		$value_max = $this->reefine->EE->input->get_post($this->group_name.'_max');
+		$formatter = new NumberFormatter( $this->locale, NumberFormatter::DECIMAL );
+		$str_min = $this->reefine->EE->input->get_post($this->group_name.'_min');
+		$str_max = $this->reefine->EE->input->get_post($this->group_name.'_max');
+		$value_min = $formatter->parse($str_min);
+		$value_max = $formatter->parse($str_max);
 		$values = array();
 		if ($value_min!==false && $value_min!=='')
 			$values['min'] = $value_min;
@@ -36,6 +53,7 @@ class Reefine_group_number_range extends Reefine_group {
 
 	function set_filters() {
 		$filters= array();
+		$formatter = new NumberFormatter( $this->locale, NumberFormatter::DECIMAL );
 
 		// get min/max ranges for number
 		// for each field in the filter group
@@ -84,11 +102,11 @@ class Reefine_group_number_range extends Reefine_group {
 					'group_name'=>$this->group_name);
 		else {
 			if (isset($this->values['min']) && isset($this->values['max']))
-				$results[0]['filter_value']=$this->values['min'] . ' - ' . $this->values['max'];
+				$results[0]['filter_value']=$formatter->format($this->values['min']) . ' - ' . $formatter->format($this->values['max']);
 			else if (isset($this->values['min']))
-				$results[0]['filter_value']='> ' . $this->values['min'];
+				$results[0]['filter_value']='> ' . $formatter->format($this->values['min']);
 			else if (isset($this->values['max']))
-				$results[0]['filter_value']='< ' . $this->values['max'];
+				$results[0]['filter_value']='< ' . $formatter->format($this->values['max']);
 			else
 				$results[0]['filter_value']='';
 			$results[0]['filter_title']=$results[0]['filter_value'];
@@ -132,8 +150,9 @@ class Reefine_group_number_range extends Reefine_group {
 	 * @param unknown $filter_out
 	 */
 	function format_filter_for_output($filter_in,&$filter_out) {
-		$filter_out['filter_min_value'] = isset($this->values['min']) ? $this->values['min'] : '';
-		$filter_out['filter_max_value'] = isset($this->values['max']) ? $this->values['max'] : '';
+		$formatter = new NumberFormatter( $this->locale, NumberFormatter::DECIMAL );
+		$filter_out['filter_min_value'] = isset($this->values['min']) ? $formatter->format($this->values['min']) : '';
+		$filter_out['filter_max_value'] = isset($this->values['max']) ? $formatter->format($this->values['max']) : '';
 	}
 
 	/**
