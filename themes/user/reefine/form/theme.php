@@ -13,7 +13,7 @@ class Reefine_theme_custom extends Reefine_theme
 
 	function before_parse_tag_data() {
 
-		if (!isset($this->module->EE->TMPL->var_pair['filter_groups'])) {
+		if (true || !isset($this->module->EE->TMPL->var_pair['filter_groups'])) {
 			
 			// make the <form> tag. POST is more likely to work with people's .htaccess setup but GET avoids XID problems.
 			if ($this->module->method=='get' || $this->module->method=='ajax')

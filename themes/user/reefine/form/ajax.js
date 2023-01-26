@@ -15,6 +15,18 @@
 				};
 			}
 		}
+
+		// AJAXify links in sidebar 
+		var filterLinks = document.getElementById('reefine_sidebar').getElementsByTagName('a');
+		for (i = 0; i < filterLinks.length; i = i + 1) {
+			filterLinks[i].onclick = function() {
+				AJAXPost(this.href + (/\?/.test(this.href) ? '&' : '?') + "ajax_request=1", ajax_success);
+				params = getParams(this.href);
+				return false;
+			};
+		}
+
+
 		// AJAXify filters
 		document.getElementById('reefine_form').onsubmit = function() {
 
