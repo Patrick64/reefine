@@ -14,6 +14,14 @@ class Reefine_field_category extends Reefine_field {
 	private $table_alias_titles;
 	private $table_alias_data;
 
+	var $group_ids;
+	var $cat_group_in_list;
+	var $group_name;
+	var $dbprefix;
+	var $custom_values;
+	var $custom_titles;
+
+
 	function __construct($reefine,$group_ids,$filter_group) {
 		$this->group_ids = $group_ids;
 		$this->reefine = $reefine;

@@ -2,6 +2,10 @@
 class Reefine_group_category extends Reefine_group_list {
 	public $type = 'list';
 	static $active_categories = false;
+
+	var $custom_values;
+	var $custom_titles;
+	var $clear_url;
 	
 	function __construct($reefine,$group_name) {
 		parent::__construct($reefine,$group_name);

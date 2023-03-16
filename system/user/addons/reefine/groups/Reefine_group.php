@@ -104,6 +104,8 @@ class Reefine_group {
 	/** Number of filters that have more than one returned results (quantity>0)
 	 * @var int */
 	public $matching_filters = 0;
+
+	var $values;
 	
 	
 	function __construct($reefine,$group_name) {

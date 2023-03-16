@@ -2,6 +2,11 @@
 class Reefine_group_number_range extends Reefine_group {
 	public $type = 'number_range';
 
+	var $custom_values;
+	var $custom_titles;
+
+	var $clear_url;
+
 	/** If locale is set then number will be parsed using that locale (eg 9.999,99 = 9999.99 for locale DE_de) */
 	public $locale = '';
 

@@ -2,6 +2,11 @@
 
 class Reefine_group_list extends Reefine_group {
 	public $type = 'list';
+
+	var $clear_url;
+	var $custom_titles;
+	var $custom_values;
+
 	public function __construct($reefine,$group_name) {
 		parent::__construct($reefine,$group_name);
 	}

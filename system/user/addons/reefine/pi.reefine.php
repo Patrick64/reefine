@@ -8,6 +8,55 @@ class Reefine {
 	var $filter_channel;
 	var $filter_groups;
 	var $url_tag;
+
+	/**
+	 * Site ID to search in
+	 *
+	 * @var number
+	 */
+	var $site;
+
+	/**
+	 * reference to EE's database module
+	 *
+	 * @var object
+	 */
+	var $db;
+
+	/**
+	 * List of custom fields to filter on
+	 *
+	 * @var object
+	 */
+	var $_custom_fields;	
+
+	/**
+	 * method to submit search url/ajax/get
+	 *
+	 * @var string
+	 */
+	var $method;
+
+	/**
+	 * @deprecated
+	 *
+	 * @var boolean
+	 */
+	var $show_separate_only;
+
+	/**
+	 * list of channels to search in
+	 *
+	 * @var number[]
+	 */
+	var $channel_ids;
+
+	var $filter_where_clause;
+
+	var $url;
+
+	var $url_tags;
+
 	/**
 	 * Value of url parameter or url_output parameter if provided
 	 * @var string
@@ -1173,7 +1222,7 @@ class Reefine {
 		// ));
 		$result = "";
 		$value = preg_replace("/\-\-/","--45----45--",$value );
-		$chars = preg_split('//u', $value, null, PREG_SPLIT_NO_EMPTY);
+		$chars = preg_split('//u', $value, -1, PREG_SPLIT_NO_EMPTY);
 		// http://php.net/manual/en/function.mb-split.php
 		foreach ($chars as $char) {
 			// this if from ee5/system/ee/legacy/core/Input.php _clean_input_keys()
