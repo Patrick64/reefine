@@ -10,7 +10,13 @@ Reefine is an ExpressionEngine add-on that allows the user to search, filter and
 
 ### Sponsors
 
-No sponsors yet - [Become a sponsor](https://github.com/sponsors/Patrick64)
+<div style="display: flex; margin: 1em 0;">
+<a href="https://www.ic360.com/" target="_blank">
+<img src="https://avatars.githubusercontent.com/u/36453035?v=4" width="128" style="border-radius: 100%; width: 90px; height:90px; object-fit: cover;"/>
+</a>
+</div>
+
+Support the development of this project by [becoming a sponsor](https://github.com/sponsors/Patrick64) or [hire me for your software project](https://www.linkedin.com/in/patrick-woodcock-258371a6/)
 
 ### Table of Contents
 <!-- run ~/opt/gh-md-toc --insert README.md to update -->
