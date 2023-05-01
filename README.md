@@ -5,7 +5,7 @@ Reefine is an ExpressionEngine add-on that allows the user to search, filter and
 
 *   [Download for EE5 / EE6](https://github.com/Patrick64/reefine/archive/master.zip)
 *   [Download for EE2 / EE3 / EE4](https://github.com/Patrick64/reefine/archive/all-versions.zip)
-*   [Live demo](http://reefine-demo.patrickw.tech/reefine/demo_basic)
+*   [Screenshot](https://expressionengine.com/asset/img/add-on-details/reefine-filtered__full.png)
 *   [About the developer](http://patrickw.tech/)
 
 ### Sponsors
